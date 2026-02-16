@@ -4,14 +4,17 @@
 	import ProcessNode from './ProcessNode.svelte';
 	import DecisionNode from './DecisionNode.svelte';
 	import StartEndNode from './StartEndNode.svelte';
+	import EntityNode from './EntityNode.svelte';
+	import ActorNode from './ActorNode.svelte';
 
 	import type { Component } from 'svelte';
 
 	const nodeTypes: Record<string, Component> = {
 		process: ProcessNode as Component,
 		decision: DecisionNode as Component,
-		'start-end': StartEndNode as Component
-		// Add other types here
+		'start-end': StartEndNode as Component,
+		entity: EntityNode as Component,
+		actor: ActorNode as Component
 	};
 </script>
 

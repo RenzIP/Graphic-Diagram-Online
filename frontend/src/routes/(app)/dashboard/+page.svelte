@@ -3,6 +3,11 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import { DIAGRAM_TYPES } from '$lib/utils/constants';
+
+	let searchQuery = $state('');
+	let showNewDiagramModal = $state(false);
 
 	const recentDocs = [
 		{
@@ -16,7 +21,7 @@
 		{
 			id: '3',
 			title: 'System Architecture',
-			type: 'Architecture',
+			type: 'Use Case',
 			updated: '1 day ago',
 			preview: 'cyan'
 		},
@@ -28,6 +33,21 @@
 			preview: 'emerald'
 		}
 	];
+
+	let filteredDocs = $derived(
+		searchQuery
+			? recentDocs.filter(
+					(d) =>
+						d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+						d.type.toLowerCase().includes(searchQuery.toLowerCase())
+				)
+			: recentDocs
+	);
+
+	function createDiagram(typeId: string) {
+		showNewDiagramModal = false;
+		window.location.href = `/editor/${crypto.randomUUID()}?type=${typeId}`;
+	}
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-950 text-slate-200">
@@ -59,10 +79,11 @@
 					<input
 						type="text"
 						placeholder="Search diagrams..."
+						bind:value={searchQuery}
 						class="w-full rounded-lg border border-slate-800 bg-slate-900 py-2 pr-4 pl-10 text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/50 focus:outline-none"
 					/>
 				</div>
-				<Button variant="primary" size="sm" href="/editor/new">
+				<Button variant="primary" size="sm" onclick={() => (showNewDiagramModal = true)}>
 					<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"
@@ -108,25 +129,20 @@
 						>
 					</button>
 
-					{#each ['Flowchart', 'ER Diagram', 'Sequence', 'Mind Map'] as template}
+					{#each DIAGRAM_TYPES as template}
 						<button
 							class="group flex flex-col items-center rounded-xl border border-slate-800 bg-slate-900 p-4 text-left transition-colors hover:border-slate-600"
-							onclick={() =>
-								(window.location.href = `/editor/${crypto.randomUUID()}?template=${template}`)}
+							onclick={() => createDiagram(template.id)}
 						>
 							<div
-								class="relative mb-3 aspect-video w-full overflow-hidden rounded-lg bg-slate-800"
+								class="relative mb-3 flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-slate-800"
 							>
-								<div
-									class="absolute inset-0 bg-slate-800 transition-transform group-hover:scale-105"
-								></div>
-								<!-- Mock lines -->
-								<div
-									class="absolute top-1/2 left-1/2 h-1 w-20 -translate-x-1/2 -translate-y-1/2 border-t-2 border-slate-700"
-								></div>
+								<span class="text-2xl opacity-40 transition-opacity group-hover:opacity-70"
+									>{template.icon}</span
+								>
 							</div>
 							<span class="text-sm font-medium text-slate-300 group-hover:text-white"
-								>{template}</span
+								>{template.name}</span
 							>
 						</button>
 					{/each}
@@ -141,7 +157,7 @@
 				</div>
 
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					{#each recentDocs as doc}
+					{#each filteredDocs as doc}
 						<Card
 							class="group relative cursor-pointer transition-colors hover:border-slate-600"
 							onclick={() => (window.location.href = `/editor/${doc.id}`)}

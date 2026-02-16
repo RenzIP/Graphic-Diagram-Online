@@ -45,6 +45,7 @@ function createCanvasStore() {
             const { connecting, ...rest } = s;
             return rest as CanvasState;
         }),
+        setZoom: (newK: number) => update(t => ({ ...t, k: Math.min(Math.max(newK, 0.1), 5) })),
         reset: () => set({ x: 0, y: 0, k: 1 })
     };
 }
