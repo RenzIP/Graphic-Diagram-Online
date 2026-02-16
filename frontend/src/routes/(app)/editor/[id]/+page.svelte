@@ -58,7 +58,11 @@
 	>
 		<div class="flex items-center gap-4">
 			<!-- Mobile Menu Button -->
-			<button class="text-slate-400 hover:text-white md:hidden" onclick={toggleLeft}>
+			<button
+				class="text-slate-400 hover:text-white md:hidden"
+				onclick={toggleLeft}
+				aria-label="Toggle Left Sidebar"
+			>
 				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
 						stroke-linecap="round"
@@ -87,7 +91,11 @@
 			<Button size="sm" variant="primary">Share</Button>
 
 			<!-- Mobile Properties Toggle -->
-			<button class="ml-2 text-slate-400 hover:text-white md:hidden" onclick={toggleRight}>
+			<button
+				class="ml-2 text-slate-400 hover:text-white md:hidden"
+				onclick={toggleRight}
+				aria-label="Toggle Right Sidebar"
+			>
 				<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 					<path
 						stroke-linecap="round"
@@ -110,6 +118,9 @@
 			<div
 				class="flex h-10 w-10 cursor-move items-center justify-center rounded border border-slate-700 bg-slate-800 transition-colors hover:border-indigo-500"
 				title="Process"
+				role="button"
+				tabindex="0"
+				aria-label="Drag Process Node"
 			>
 				<div class="mb-2 h-8 w-12 rounded border-2 border-slate-500 bg-slate-800"></div>
 				<span class="text-[10px] text-slate-400">Process</span>
@@ -117,6 +128,9 @@
 			<div
 				class="flex cursor-grab flex-col items-center justify-center p-2 transition-transform hover:scale-105 active:cursor-grabbing"
 				title="Decision"
+				role="button"
+				tabindex="0"
+				aria-label="Drag Decision Node"
 			>
 				<div class="mb-2 h-8 w-8 rotate-45 border-2 border-slate-500 bg-slate-800"></div>
 				<span class="text-[10px] text-slate-400">Decision</span>
@@ -124,6 +138,9 @@
 			<div
 				class="flex cursor-grab flex-col items-center justify-center p-2 transition-transform hover:scale-105 active:cursor-grabbing"
 				title="Start/End"
+				role="button"
+				tabindex="0"
+				aria-label="Drag Start/End Node"
 			>
 				<div class="mb-2 h-8 w-12 rounded-full border-2 border-slate-500 bg-slate-800"></div>
 				<span class="text-[10px] text-slate-400">Start/End</span>
@@ -152,7 +169,7 @@
 			<div class="absolute right-0 bottom-0 left-0 z-20 border-t border-slate-800 bg-slate-900">
 				<div class="flex items-center justify-between px-4 py-2">
 					<span class="text-xs font-medium text-slate-400">Text-to-Diagram (DSL)</span>
-					<button class="text-slate-500 hover:text-white">
+					<button class="text-slate-500 hover:text-white" aria-label="Toggle DSL Panel">
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path
 								stroke-linecap="round"
@@ -175,7 +192,11 @@
 		>
 			<div class="mb-4 flex items-center justify-between">
 				<h3 class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Properties</h3>
-				<button class="text-slate-400 hover:text-white" onclick={toggleRight}>
+				<button
+					class="text-slate-400 hover:text-white"
+					onclick={toggleRight}
+					aria-label="Toggle Properties Panel"
+				>
 					<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"

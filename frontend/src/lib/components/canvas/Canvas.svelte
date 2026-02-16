@@ -5,6 +5,9 @@
 	import { selectionStore } from '$lib/stores/selection';
 	import Grid from './Grid.svelte';
 	import { type Point, getSmoothPath } from '$lib/utils/geometry';
+	import { type Snippet } from 'svelte';
+
+	let { children }: { children?: Snippet } = $props();
 
 	let svgElement: SVGSVGElement;
 
@@ -175,7 +178,7 @@
 
 		<!-- Content Group with Transform -->
 		<g transform="translate({$canvasStore.x} {$canvasStore.y}) scale({$canvasStore.k})">
-			<slot />
+			{@render children?.()}
 
 			<!-- Active Connection Line -->
 			{#if $canvasStore.connecting}
