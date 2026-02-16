@@ -1,0 +1,724 @@
+================================================================================
+                     KONSEP APLIKASI: GraDiOl
+              (Graphic Diagram Online — Platform Editor
+            Diagram Kolaboratif Berbasis Web)
+================================================================================
+
+
+1. RINGKASAN EKSEKUTIF
+================================================================================
+
+Dokumentasi visual merupakan komponen krusial dalam pengembangan perangkat
+lunak, manajemen proyek, dan analisis sistem. Saat ini, sebagian besar tools
+diagram terbagi menjadi dua kategori utama: visual drag-and-drop editor atau
+text-based generator. Namun, belum banyak platform yang mengintegrasikan
+keduanya secara fleksibel serta menyediakan kolaborasi realtime dengan
+arsitektur terbuka.
+
+GraDiOl bertujuan mengembangkan platform editor diagram berbasis web yang
+menggabungkan:
+
+  • Text-based Diagram Language (Custom DSL)
+  • Visual Editor dengan manual override
+  • Konversi dua arah (Text ⇄ Diagram)
+  • Konversi ASCII → Diagram (AI-friendly)
+  • Kolaborasi realtime berbasis WebSocket
+
+Platform ini dirancang modular, scalable, dan siap dikembangkan menjadi produk
+profesional untuk kebutuhan akademik maupun industri.
+
+
+2. LATAR BELAKANG
+================================================================================
+
+Dalam proses perancangan sistem, diagram seperti Flowchart, ERD, BPMN, dan
+Sequence Diagram menjadi alat komunikasi utama antar tim teknis dan non-teknis.
+
+Permasalahan yang umum ditemui:
+
+  • Tools visual tidak fleksibel untuk versioning dan integrasi dengan
+    code repository (git).
+  • Tools text-based (Mermaid, PlantUML) tidak menyediakan editing visual
+    interaktif.
+  • Kolaborasi realtime terbatas atau proprietary (draw.io, Lucidchart).
+  • Tidak tersedia konversi otomatis dari ASCII diagram yang sering
+    dihasilkan oleh AI (ChatGPT, Copilot, dll.).
+
+Dengan meningkatnya penggunaan AI dalam menghasilkan diagram berbasis teks,
+dibutuhkan sistem yang mampu mengkonversi dan menyempurnakan hasil tersebut
+secara visual dan kolaboratif.
+
+
+3. TUJUAN PROYEK
+================================================================================
+
+  1. Mengembangkan editor diagram berbasis web yang mendukung berbagai jenis
+     diagram teknis.
+  2. Menyediakan sistem konversi dua arah antara representasi teks dan visual.
+  3. Mengimplementasikan kolaborasi realtime dengan kontrol konflik dan
+     versioning.
+  4. Membangun arsitektur backend yang scalable dan modular.
+  5. Menyediakan sistem autentikasi dan manajemen workspace untuk kolaborasi
+     tim.
+  6. Membangun fondasi untuk pengembangan fitur lanjutan seperti version
+     history, template marketplace, dan AI-assisted diagram generation.
+
+
+4. RUANG LINGKUP PROYEK
+================================================================================
+
+4.1 Diagram yang Didukung
+--------------------------------------------------------------------------------
+
+  Tahap Awal (MVP):
+    • Flowchart
+    • Use Case Diagram
+    • Entity Relationship Diagram (ERD)
+
+  Tahap Lanjutan:
+    • Sequence Diagram
+    • Activity Diagram
+    • BPMN (Business Process Model and Notation)
+    • Class Diagram
+    • Deployment Diagram
+    • Gantt Chart
+    • Mind Map
+    • Custom/Freeform Diagram
+
+4.2 Batasan Scope MVP
+--------------------------------------------------------------------------------
+
+  Yang termasuk MVP:
+    • Auth (login/register via Supabase)
+    • CRUD dokumen diagram
+    • Editor visual dasar (drag, connect, style)
+    • Text-to-Diagram dan Diagram-to-Text
+    • Export PNG/SVG
+
+  Yang TIDAK termasuk MVP (tahap lanjutan):
+    • Realtime collaboration (WebSocket)
+    • AI-assisted generation
+    • Version history & diff visual
+    • Template marketplace
+
+
+5. FITUR UTAMA SISTEM
+================================================================================
+
+5.1 Text-Based Diagram (Custom DSL)
+--------------------------------------------------------------------------------
+
+  Bahasa diagram internal yang dirancang khusus untuk GraDiOl.
+
+  Kapabilitas:
+    • Definisi node, edge, label, dan atribut
+    • Support diagram-type specific syntax
+    • Ekspor ulang dari diagram visual ke DSL (bidirectional)
+    • Format deterministik agar git-friendly (diffable & mergeable)
+
+  Contoh DSL (Flowchart):
+  ┌─────────────────────────────────────────────────┐
+  │  @flowchart "Login Process"                     │
+  │                                                 │
+  │  start "Mulai"                                  │
+  │  process "Input Credentials"                    │
+  │  decision "Valid?"                              │
+  │  process "Dashboard"                            │
+  │  end "Selesai"                                  │
+  │                                                 │
+  │  start -> "Input Credentials"                   │
+  │  "Input Credentials" -> "Valid?"                │
+  │  "Valid?" --yes--> "Dashboard"                  │
+  │  "Valid?" --no--> "Input Credentials"           │
+  │  "Dashboard" -> end                             │
+  └─────────────────────────────────────────────────┘
+
+  Komponen teknis:
+    • Parser     : Text → AST (Abstract Syntax Tree)
+    • Transformer: AST → Semantic Model (nodes/edges)
+    • Serializer : Semantic Model → Text (diagram-to-text)
+    • Auto-layout: Dagre/ELK algorithm untuk posisi node otomatis
+
+5.2 Visual Editor
+--------------------------------------------------------------------------------
+
+  Canvas (SVG-based):
+    • Pan & zoom (scroll/pinch)
+    • Infinite canvas
+    • Snap-to-grid
+    • Minimap overview
+    • Background grid
+
+  Node manipulation:
+    • Drag and drop node dari palette
+    • Resize & rotate
+    • Inline text editing langsung di node
+    • Style customization (warna, border, font, shadow)
+
+  Edge/Connection:
+    • Click-to-connect antar node
+    • Auto-routing (bezier, straight, step/orthogonal)
+    • Manual edge routing override
+    • Label on edge
+
+  Selection & Editing:
+    • Multi-select (Shift+Click / drag-select)
+    • Group, align, distribute
+    • Copy/paste (Ctrl+C/V)
+    • Undo/redo (Ctrl+Z / Ctrl+Shift+Z)
+    • Delete (Del/Backspace)
+    • Keyboard shortcuts (arrow keys, spacebar pan)
+
+  Toolbar & Panels:
+    • Shape palette per diagram type
+    • Text tool
+    • Connector tool
+    • Property/style panel (sidebar kanan)
+    • Layer panel (z-order)
+
+5.3 ASCII to Diagram Conversion
+--------------------------------------------------------------------------------
+
+  • Parsing pola ASCII terbatas (flowchart style, box-and-arrow)
+  • Interpretasi heuristik menjadi semantic model diagram
+  • Validasi dan preview sebelum finalisasi
+  • Khusus berguna untuk mengkonversi output diagram dari AI/LLM
+
+  Contoh input:
+  ┌─────────────────────────────────────────────────┐
+  │  +-------+     +----------+     +---------+     │
+  │  | Start | --> | Process  | --> |   End   |     │
+  │  +-------+     +----------+     +---------+     │
+  └─────────────────────────────────────────────────┘
+
+5.4 Diagram to Text
+--------------------------------------------------------------------------------
+
+  • Ekspor semantic model ke DSL
+  • Opsi menyertakan layout (posisi, routing) dalam output
+  • Format deterministik untuk versioning (git-friendly)
+  • Roundtrip guarantee: Text → Diagram → Text menghasilkan output identik
+
+5.5 Realtime Collaboration
+--------------------------------------------------------------------------------
+
+  • Room-based WebSocket session
+  • Event-driven operation model
+  • Server-authoritative versioning
+  • Node-level locking saat editing (mencegah konflik)
+  • Presence indicator (siapa saja yang online)
+  • Cursor tracking (lihat posisi cursor user lain di canvas)
+  • Auto-reconnect saat koneksi terputus
+
+
+6. SISTEM PENDUKUNG (BARU)
+================================================================================
+
+6.1 Authentication & Authorization
+--------------------------------------------------------------------------------
+
+  Provider   : Supabase Auth (terintegrasi dengan database)
+  Metode     : OAuth (Google, GitHub) + Magic Link email
+  Session    : JWT token, refresh via httpOnly secure cookie
+  Frontend   : SvelteKit hooks (hooks.server.ts) untuk route guard
+  Backend    : Fiber middleware untuk validasi JWT
+
+  Role-based access:
+    • Owner   — full control (CRUD, share, delete)
+    • Editor  — bisa edit diagram
+    • Viewer  — hanya bisa melihat (read-only)
+
+6.2 Workspace & Project Management
+--------------------------------------------------------------------------------
+
+  Hierarki organisasi dokumen:
+
+    Workspace (milik 1 user atau 1 tim)
+    └── Project (folder/pengelompokan)
+        └── Document (1 diagram)
+
+  Fitur:
+    • CRUD Workspace: buat, rename, hapus
+    • CRUD Project: organisir diagram ke dalam project
+    • Dashboard/Home: list workspace, recent documents, quick actions
+    • Sharing: share per-workspace atau per-document
+    • Member management: invite via email/link
+
+6.3 Export Engine
+--------------------------------------------------------------------------------
+
+  Format export yang didukung:
+
+    Format     Metode
+    ───────    ──────────────────────────────────────────
+    PNG        Canvas API → toBlob() dari SVG rendering
+    SVG        Serialize SVG DOM langsung
+    PDF        jsPDF atau server-side rendering
+    DSL Text   Serializer (fitur 5.4)
+    JSON       Raw semantic model export
+
+6.4 Template System
+--------------------------------------------------------------------------------
+
+  • Pre-built diagram templates untuk quick start
+  • User bisa save diagram sebagai personal template
+  • Public template gallery (potensi marketplace)
+  • Template per diagram type (Flowchart template, ERD template, dll.)
+
+6.5 Version History
+--------------------------------------------------------------------------------
+
+  • Snapshot otomatis setiap kali dokumen di-save
+  • Lihat daftar versi dengan timestamp & author
+  • Preview versi lama tanpa menimpa yang sekarang
+  • Restore ke versi tertentu
+  • Diff visual: highlight perubahan node/edge antara 2 versi
+
+6.6 Search
+--------------------------------------------------------------------------------
+
+  • Full-text search di semua dokumen milik user
+  • Filter by diagram type, project, workspace
+  • Search by node label / edge label
+  • PostgreSQL tsvector + GIN index untuk performa
+
+6.7 Notification System
+--------------------------------------------------------------------------------
+
+  • Notifikasi saat di-invite ke workspace
+  • Notifikasi saat dokumen yang di-share di-edit
+  • In-app notification bell
+  • Opsional: email notification untuk event penting
+
+
+7. ARSITEKTUR TEKNOLOGI
+================================================================================
+
+7.1 Tech Stack
+--------------------------------------------------------------------------------
+
+  Layer                    Teknologi
+  ─────────────────────    ──────────────────────────────────────
+  Frontend Framework       SvelteKit (SSR + SPA)
+  Frontend Language        TypeScript
+  Rendering Engine         SVG-based (native browser SVG DOM)
+  Styling                  TailwindCSS v4
+  Backend Language         Golang
+  Backend Framework        Fiber (HTTP + WebSocket)
+  ORM                      Bun (uptrace/bun)
+  Database                 PostgreSQL (Supabase Managed)
+  Authentication           Supabase Auth (JWT)
+  Cache & Realtime State   Redis (presence, locks, pub/sub)
+  Deployment (Backend)     Google Cloud Run (containerized)
+  Deployment (Frontend)    Vercel
+
+7.2 System Layering
+--------------------------------------------------------------------------------
+
+  ┌─────────────────────────────────────────────────────────┐
+  │                    CLIENT (SvelteKit)                    │
+  │  ┌─────────────┐  ┌─────────────┐  ┌────────────────┐  │
+  │  │ SVG Canvas  │  │  DSL Editor │  │  Dashboard UI  │  │
+  │  └──────┬──────┘  └──────┬──────┘  └───────┬────────┘  │
+  │         │                │                  │           │
+  │         └────────────────┼──────────────────┘           │
+  │                          │                              │
+  │              ┌───────────┴───────────┐                  │
+  │              │  WebSocket   REST API │                  │
+  │              └───────────┬───────────┘                  │
+  └──────────────────────────┼──────────────────────────────┘
+                             │
+  ┌──────────────────────────┼──────────────────────────────┐
+  │                    SERVER (Golang/Fiber)                 │
+  │                          │                              │
+  │         ┌────────────────┼────────────────┐             │
+  │         ▼                ▼                ▼             │
+  │  ┌────────────┐  ┌────────────┐  ┌──────────────┐      │
+  │  │  REST API  │  │  WS Hub    │  │  Middleware   │      │
+  │  │  Handlers  │  │  (Rooms)   │  │  (Auth/CORS) │      │
+  │  └─────┬──────┘  └─────┬──────┘  └──────────────┘      │
+  │        │               │                                │
+  │        ▼               ▼                                │
+  │  ┌───────────┐  ┌────────────┐                          │
+  │  │ PostgreSQL│  │   Redis    │                          │
+  │  │  (JSONB)  │  │ (pub/sub)  │                          │
+  │  └───────────┘  └────────────┘                          │
+  └─────────────────────────────────────────────────────────┘
+
+  Alur data:
+    • REST API Layer  : Client → REST → Service → Repository → PostgreSQL
+    • Realtime Layer  : Client ⇄ WebSocket ⇄ Hub ⇄ Redis (pub/sub)
+
+7.3 Data Model
+--------------------------------------------------------------------------------
+
+  Dokumen disimpan dalam bentuk JSONB di PostgreSQL.
+
+  Struktur utama per dokumen:
+
+    ┌───────────────────────────────────────────────────────┐
+    │ documents                                             │
+    ├───────────────────────────────────────────────────────┤
+    │ id            : UUID (PK)                             │
+    │ project_id    : UUID (FK → projects)                  │
+    │ title         : TEXT                                  │
+    │ diagram_type  : TEXT (flowchart, erd, usecase, ...)   │
+    │ content       : JSONB (semantic model)                │
+    │ view          : JSONB (visual overrides)              │
+    │ version       : INT                                   │
+    │ created_by    : UUID (FK → users)                     │
+    │ created_at    : TIMESTAMPTZ                           │
+    │ updated_at    : TIMESTAMPTZ                           │
+    └───────────────────────────────────────────────────────┘
+
+  Content JSONB (Semantic Model):
+    {
+      "nodes": [
+        { "id": "n1", "type": "process", "label": "...", "properties": {} }
+      ],
+      "edges": [
+        { "id": "e1", "source": "n1", "target": "n2", "label": "", "type": "arrow" }
+      ]
+    }
+
+  View JSONB (Visual Overrides):
+    {
+      "positions": { "n1": { "x": 100, "y": 200 } },
+      "styles":    { "n1": { "fill": "#FF5733", "fontSize": 14 } },
+      "routing":   { "e1": { "type": "bezier", "points": [...] } }
+    }
+
+7.4 WebSocket Protocol
+--------------------------------------------------------------------------------
+
+  Client → Server:
+
+    { "type": "join_room",   "room_id": "doc-uuid" }
+    { "type": "lock_node",   "node_id": "node-uuid" }
+    { "type": "unlock_node", "node_id": "node-uuid" }
+    { "type": "update_node", "node_id": "...", "changes": {...} }
+    { "type": "add_node",    "node": {...} }
+    { "type": "delete_node", "node_id": "..." }
+    { "type": "add_edge",    "edge": {...} }
+    { "type": "delete_edge", "edge_id": "..." }
+    { "type": "cursor_move", "x": 100, "y": 200 }
+
+  Server → Client:
+
+    { "type": "room_state",    "users": [...], "locks": {...} }
+    { "type": "user_joined",   "user": {...} }
+    { "type": "user_left",     "user_id": "..." }
+    { "type": "node_locked",   "node_id": "...", "by": "user-id" }
+    { "type": "node_unlocked", "node_id": "..." }
+    { "type": "node_updated",  "node_id": "...", "changes": {...} }
+    { "type": "node_added",    "node": {...} }
+    { "type": "node_deleted",  "node_id": "..." }
+    { "type": "cursor_update", "user_id": "...", "x": 100, "y": 200 }
+    { "type": "error",         "message": "..." }
+
+  Conflict Resolution:
+    • Strategi: Node-level Locking (simple & predictable)
+    • Saat user mengklik node → backend lock node untuk user tersebut
+    • User lain tidak bisa edit node yang sedang di-lock
+    • Lock auto-release setelah timeout atau user selesai edit
+
+
+8. ARSITEKTUR KODE
+================================================================================
+
+8.1 Backend (Golang)
+--------------------------------------------------------------------------------
+
+  backend/
+  ├── cmd/api/
+  │   └── main.go                    # Entry point
+  ├── internal/
+  │   ├── config/
+  │   │   └── config.go              # Environment config loader
+  │   ├── middleware/
+  │   │   ├── auth.go                # JWT validation
+  │   │   ├── cors.go                # CORS configuration
+  │   │   └── ratelimit.go           # Rate limiting
+  │   ├── db/
+  │   │   ├── conn.go                # PostgreSQL connection
+  │   │   └── migrations/            # SQL migration files
+  │   ├── domain/
+  │   │   ├── user/                  # Auth, profile
+  │   │   │   ├── model.go
+  │   │   │   ├── repo.go
+  │   │   │   └── service.go
+  │   │   ├── workspace/             # Workspace CRUD, members
+  │   │   │   ├── model.go
+  │   │   │   ├── repo.go
+  │   │   │   └── service.go
+  │   │   ├── project/               # Project CRUD
+  │   │   │   ├── model.go
+  │   │   │   ├── repo.go
+  │   │   │   └── service.go
+  │   │   ├── document/              # Document CRUD, JSONB ops
+  │   │   │   ├── model.go
+  │   │   │   ├── repo.go
+  │   │   │   └── service.go
+  │   │   ├── version/               # Version history
+  │   │   │   ├── model.go
+  │   │   │   ├── repo.go
+  │   │   │   └── service.go
+  │   │   └── template/              # Template CRUD
+  │   │       ├── model.go
+  │   │       ├── repo.go
+  │   │       └── service.go
+  │   ├── http/
+  │   │   ├── routes.go              # Route definitions
+  │   │   ├── handlers_health.go
+  │   │   ├── handlers_auth.go
+  │   │   ├── handlers_workspaces.go
+  │   │   ├── handlers_projects.go
+  │   │   ├── handlers_documents.go
+  │   │   ├── handlers_versions.go
+  │   │   └── handlers_templates.go
+  │   ├── redis/
+  │   │   ├── client.go              # Redis connection
+  │   │   ├── presence.go            # User presence tracking
+  │   │   └── locks.go               # Node locking
+  │   └── ws/
+  │       ├── hub.go                 # WebSocket hub (room manager)
+  │       ├── protocol.go            # Message types & parsing
+  │       └── handlers.go            # WS event handlers
+  ├── go.mod
+  ├── go.sum
+  ├── Dockerfile
+  └── .env.example
+
+8.2 Frontend (SvelteKit)
+--------------------------------------------------------------------------------
+
+  frontend/src/
+  ├── lib/
+  │   ├── api/                       # REST API client
+  │   │   ├── client.ts              # Base fetch wrapper
+  │   │   ├── auth.ts                # Auth endpoints
+  │   │   ├── documents.ts           # Document CRUD
+  │   │   ├── workspaces.ts          # Workspace CRUD
+  │   │   └── projects.ts            # Project CRUD
+  │   ├── components/
+  │   │   ├── canvas/                # SVG canvas engine
+  │   │   │   ├── Canvas.svelte      # Main canvas container
+  │   │   │   ├── Grid.svelte        # Background grid
+  │   │   │   ├── Minimap.svelte     # Minimap overview
+  │   │   │   └── SelectionBox.svelte
+  │   │   ├── editor/                # Editor UI
+  │   │   │   ├── Toolbar.svelte     # Top toolbar
+  │   │   │   ├── Sidebar.svelte     # Shape palette
+  │   │   │   ├── PropertyPanel.svelte # Style panel
+  │   │   │   └── DslEditor.svelte   # Text editor panel
+  │   │   ├── nodes/                 # Shape components
+  │   │   │   ├── ProcessNode.svelte
+  │   │   │   ├── DecisionNode.svelte
+  │   │   │   ├── StartEndNode.svelte
+  │   │   │   ├── EntityNode.svelte
+  │   │   │   └── ActorNode.svelte
+  │   │   ├── edges/                 # Connection components
+  │   │   │   ├── ArrowEdge.svelte
+  │   │   │   └── RelationEdge.svelte
+  │   │   └── ui/                    # Shared UI components
+  │   │       ├── Button.svelte
+  │   │       ├── Modal.svelte
+  │   │       ├── Toast.svelte
+  │   │       └── Avatar.svelte
+  │   ├── dsl/                       # DSL engine
+  │   │   ├── parser.ts              # Text → AST
+  │   │   ├── transformer.ts         # AST → Semantic Model
+  │   │   ├── serializer.ts          # Semantic Model → Text
+  │   │   └── schemas/               # Validation per diagram type
+  │   ├── layout/                    # Auto-layout
+  │   │   └── dagre.ts               # Dagre algorithm wrapper
+  │   ├── stores/                    # Svelte reactive stores
+  │   │   ├── canvas.ts              # Zoom, pan, viewport
+  │   │   ├── document.ts            # Semantic model state
+  │   │   ├── selection.ts           # Selected node/edge IDs
+  │   │   ├── history.ts             # Undo/redo command stack
+  │   │   └── collaboration.ts       # Remote cursors, presence
+  │   ├── ws/                        # WebSocket client
+  │   │   └── client.ts              # WS connection manager
+  │   └── utils/                     # Helpers
+  │       ├── constants.ts
+  │       ├── geometry.ts            # Hitbox, intersection math
+  │       └── export.ts              # PNG/SVG/PDF export
+  ├── routes/
+  │   ├── (auth)/                    # Auth pages
+  │   │   ├── login/+page.svelte
+  │   │   └── callback/+page.svelte
+  │   ├── (app)/                     # Authenticated pages
+  │   │   ├── dashboard/+page.svelte # Home / workspace list
+  │   │   ├── workspace/[id]/
+  │   │   │   └── +page.svelte       # Project list dalam workspace
+  │   │   └── editor/[id]/
+  │   │       └── +page.svelte       # Diagram editor utama
+  │   ├── +layout.svelte
+  │   └── +page.svelte               # Landing page
+  └── hooks.server.ts                # Auth guard middleware
+
+
+9. DATABASE SCHEMA
+================================================================================
+
+  -- Users (managed by Supabase Auth, extended)
+  CREATE TABLE user_profiles (
+      id         UUID PRIMARY KEY REFERENCES auth.users(id),
+      full_name  TEXT,
+      avatar_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT now()
+  );
+
+  -- Workspaces
+  CREATE TABLE workspaces (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name       TEXT NOT NULL,
+      owner_id   UUID REFERENCES user_profiles(id),
+      created_at TIMESTAMPTZ DEFAULT now()
+  );
+
+  -- Workspace Members
+  CREATE TABLE workspace_members (
+      workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+      user_id      UUID REFERENCES user_profiles(id),
+      role         TEXT CHECK (role IN ('owner', 'editor', 'viewer')),
+      joined_at    TIMESTAMPTZ DEFAULT now(),
+      PRIMARY KEY (workspace_id, user_id)
+  );
+
+  -- Projects
+  CREATE TABLE projects (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE,
+      name         TEXT NOT NULL,
+      created_at   TIMESTAMPTZ DEFAULT now()
+  );
+
+  -- Documents
+  CREATE TABLE documents (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      project_id   UUID REFERENCES projects(id) ON DELETE CASCADE,
+      title        TEXT NOT NULL DEFAULT 'Untitled',
+      diagram_type TEXT NOT NULL,
+      content      JSONB NOT NULL DEFAULT '{"nodes":[],"edges":[]}',
+      view         JSONB NOT NULL DEFAULT '{"positions":{},"styles":{},"routing":{}}',
+      version      INT NOT NULL DEFAULT 1,
+      created_by   UUID REFERENCES user_profiles(id),
+      created_at   TIMESTAMPTZ DEFAULT now(),
+      updated_at   TIMESTAMPTZ DEFAULT now()
+  );
+
+  -- Document Versions (history)
+  CREATE TABLE document_versions (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      document_id UUID REFERENCES documents(id) ON DELETE CASCADE,
+      version     INT NOT NULL,
+      content     JSONB NOT NULL,
+      view        JSONB NOT NULL,
+      created_by  UUID REFERENCES user_profiles(id),
+      created_at  TIMESTAMPTZ DEFAULT now(),
+      UNIQUE (document_id, version)
+  );
+
+  -- Templates
+  CREATE TABLE templates (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title         TEXT NOT NULL,
+      diagram_type  TEXT NOT NULL,
+      content       JSONB NOT NULL,
+      view          JSONB NOT NULL,
+      thumbnail_url TEXT,
+      is_public     BOOLEAN DEFAULT false,
+      created_by    UUID REFERENCES user_profiles(id),
+      created_at    TIMESTAMPTZ DEFAULT now()
+  );
+
+  -- Full-text search index
+  CREATE INDEX idx_documents_search ON documents
+      USING GIN (to_tsvector('indonesian', title));
+
+
+10. POTENSI PENGEMBANGAN BISNIS
+================================================================================
+
+  Tahap 1 — Open Platform:
+    • Free tier untuk individual use
+    • Open-source core engine
+
+  Tahap 2 — SaaS (Subscription):
+    • Tim workspace (5+ members)
+    • Unlimited version history
+    • Priority support
+    • Custom branding
+
+  Tahap 3 — Enterprise & Ecosystem:
+    • Integrasi Git repository (auto-commit diagram changes)
+    • Version history dengan diff visual
+    • AI-assisted diagram generation (LLM integration)
+    • Marketplace template diagram (user-generated content)
+    • Enterprise team workspace dengan SSO
+    • On-premise deployment option
+    • API access untuk integrasi dengan tools lain
+
+
+11. ROADMAP PENGEMBANGAN
+================================================================================
+
+  Phase 1 — Foundation (MVP)
+  ──────────────────────────────────────────────
+    [  ] Auth (Supabase) — login, register, session
+    [  ] Database schema — semua tabel
+    [  ] Backend CRUD API — document, project, workspace
+    [  ] Frontend routing — dashboard, editor page
+    [  ] Basic SVG canvas — pan, zoom, grid
+    [  ] Node rendering — drag, select, style
+    [  ] Edge rendering — connect nodes, auto-route
+    [  ] Save/load document — REST API ↔ JSONB
+
+  Phase 2 — Core Features
+  ──────────────────────────────────────────────
+    [  ] Undo/redo (local history)
+    [  ] Text-to-Diagram (DSL parser + auto-layout)
+    [  ] Diagram-to-Text (serializer)
+    [  ] ASCII-to-Diagram conversion
+    [  ] Export (PNG, SVG)
+    [  ] Template system
+    [  ] Multiple diagram types (ERD, Use Case)
+
+  Phase 3 — Collaboration
+  ──────────────────────────────────────────────
+    [  ] WebSocket connection + room management
+    [  ] Presence & cursor tracking
+    [  ] Node locking
+    [  ] Realtime sync (operation broadcast)
+    [  ] Version history + diff visual
+    [  ] Sharing & permissions
+
+  Phase 4 — Polish & Business
+  ──────────────────────────────────────────────
+    [  ] Search (full-text)
+    [  ] Notification system
+    [  ] PDF export
+    [  ] Mobile/touch support
+    [  ] AI-assisted generation
+    [  ] Public template marketplace
+
+
+12. KESIMPULAN
+================================================================================
+
+GraDiOl berpotensi menjadi platform diagram berbasis web yang fleksibel,
+modern, dan kolaboratif. Dengan pendekatan hybrid (text + visual), arsitektur
+scalable (Go + SvelteKit + PostgreSQL + Redis), serta fitur kolaborasi realtime,
+sistem ini memiliki nilai teknis dan strategis yang signifikan untuk kebutuhan
+akademik maupun profesional.
+
+Keunggulan utama dibanding kompetitor:
+  • Hybrid approach — text DSL + visual editor dalam 1 platform
+  • ASCII conversion — mengkonversi output AI menjadi diagram proper
+  • Git-friendly — format DSL yang deterministik untuk versioning
+  • Realtime collab — mirip Figma, bukan sekadar file sharing
+  • Open architecture — modular, extensible, siap untuk SaaS
+
+================================================================================
