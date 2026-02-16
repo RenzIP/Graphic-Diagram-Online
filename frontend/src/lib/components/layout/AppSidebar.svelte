@@ -2,7 +2,9 @@
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 
-	let activePath = $state('/dashboard'); // In real app, derived from page store
+	import { page } from '$app/stores';
+
+	let activePath = $derived($page.url.pathname);
 </script>
 
 <aside class="flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900">
@@ -52,7 +54,11 @@
 					</svg>
 					Dashboard
 				</Button>
-				<Button variant="ghost" class="w-full justify-start" href="#">
+				<Button
+					variant={activePath.startsWith('/team') ? 'secondary' : 'ghost'}
+					class="w-full justify-start"
+					href="/team"
+				>
 					<svg
 						class="mr-3 h-4 w-4 text-slate-400"
 						fill="none"
@@ -68,7 +74,11 @@
 					</svg>
 					Team Members
 				</Button>
-				<Button variant="ghost" class="w-full justify-start" href="#">
+				<Button
+					variant={activePath.startsWith('/settings') ? 'secondary' : 'ghost'}
+					class="w-full justify-start"
+					href="/settings"
+				>
 					<svg
 						class="mr-3 h-4 w-4 text-slate-400"
 						fill="none"
@@ -96,7 +106,10 @@
 		<div>
 			<div class="mb-2 flex items-center justify-between px-3">
 				<h3 class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Workspaces</h3>
-				<button class="text-slate-500 transition-colors hover:text-white">
+				<button
+					class="text-slate-500 transition-colors hover:text-white"
+					aria-label="Toggle Workspaces"
+				>
 					<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
 							stroke-linecap="round"
