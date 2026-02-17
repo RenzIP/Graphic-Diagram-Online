@@ -26,13 +26,11 @@ func (h *DocumentHandler) ListByProject(c *fiber.Ctx) error {
 }
 
 // POST /api/documents
+// Frontend utils/api.ts sends { title, content } without project_id
 func (h *DocumentHandler) Create(c *fiber.Ctx) error {
 	var req document.CreateDocumentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(400).JSON(fiber.Map{"message": "Invalid request body"})
-	}
-	if req.ProjectID == "" {
-		return c.Status(400).JSON(fiber.Map{"message": "project_id is required"})
 	}
 
 	doc, err := h.svc.Create(c.Context(), req)

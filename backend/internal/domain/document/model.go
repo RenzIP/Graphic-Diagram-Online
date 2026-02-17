@@ -51,7 +51,7 @@ type Document struct {
 	bun.BaseModel `bun:"table:documents,alias:d"`
 
 	ID          string          `bun:"id,pk,type:uuid,default:gen_random_uuid()" json:"id"`
-	ProjectID   string          `bun:"project_id,type:uuid,notnull" json:"project_id"`
+	ProjectID   string          `bun:"project_id,type:uuid" json:"project_id"`
 	Title       string          `bun:"title,notnull" json:"title"`
 	DiagramType string          `bun:"diagram_type,notnull" json:"diagram_type"`
 	Content     json.RawMessage `bun:"content,type:jsonb,notnull" json:"content"`
@@ -77,11 +77,12 @@ type DocumentMeta struct {
 }
 
 // CreateDocumentRequest matches frontend DocumentCreate from lib/api/documents.ts
+// Also supports frontend utils/api.ts which sends { title, content } without project_id
 type CreateDocumentRequest struct {
-	ProjectID   string           `json:"project_id"`
-	Title       string           `json:"title"`
-	DiagramType string           `json:"diagram_type"`
-	Content     *DocumentContent `json:"content,omitempty"`
+	ProjectID   string          `json:"project_id"`
+	Title       string          `json:"title"`
+	DiagramType string          `json:"diagram_type"`
+	Content     json.RawMessage `json:"content,omitempty"`
 }
 
 // Workspace model

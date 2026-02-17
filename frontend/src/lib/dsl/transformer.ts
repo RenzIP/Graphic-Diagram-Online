@@ -73,8 +73,6 @@ export function transformAST(ast: AST): DocumentState {
                 source: sourceId,
                 target: targetId,
                 label: astEdge.edgeLabel,
-                target: targetId,
-                label: astEdge.edgeLabel,
                 type: 'step' // Default to orthogonal for clearer flowcharts
             });
             if (!children[sourceId].includes(targetId)) {

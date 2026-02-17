@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS projects (
 -- Documents
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    project_id UUID REFERENCES projects(id) ON DELETE CASCADE,
     title TEXT NOT NULL DEFAULT 'Untitled',
     diagram_type TEXT NOT NULL DEFAULT 'flowchart',
     content JSONB NOT NULL DEFAULT '{"nodes":[],"edges":[]}',

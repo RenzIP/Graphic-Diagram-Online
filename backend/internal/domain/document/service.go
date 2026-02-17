@@ -75,17 +75,17 @@ func (s *Service) GetByID(ctx context.Context, id string) (*Document, error) {
 
 func (s *Service) Create(ctx context.Context, req CreateDocumentRequest) (*Document, error) {
 	// Default content if not provided
-	content := &DocumentContent{
-		Nodes: []Node{},
-		Edges: []Edge{},
-	}
-	if req.Content != nil {
-		content = req.Content
-	}
-
-	contentJSON, err := json.Marshal(content)
-	if err != nil {
-		return nil, err
+	contentJSON := req.Content
+	if len(contentJSON) == 0 || string(contentJSON) == "{}" {
+		defaultContent := &DocumentContent{
+			Nodes: []Node{},
+			Edges: []Edge{},
+		}
+		var err error
+		contentJSON, err = json.Marshal(defaultContent)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Default view
