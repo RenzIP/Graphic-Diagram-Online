@@ -13,6 +13,8 @@
 		exportDSL
 	} from '$lib/utils/export';
 	import { serializeToText } from '$lib/dsl/serializer';
+	import { alignNodes, distributeNodes } from '$lib/utils/layout';
+	import { selectionStore } from '$lib/stores/selection';
 	import { get } from 'svelte/store';
 
 	let {
@@ -31,6 +33,11 @@
 	let titleInput = $state('');
 	let showExportModal = $state(false);
 	let isSaving = $state(false);
+
+	// Derived state for enabling tools
+	let selection = $derived($selectionStore);
+	let canAlign = $derived(selection.nodes.length >= 2);
+	let canDistribute = $derived(selection.nodes.length >= 3);
 
 	function handleUndo() {
 		const state = historyStore.undo(get(documentStore));
@@ -51,6 +58,18 @@
 				(window as any).__gradiol_toast('Document saved', 'success');
 			}
 		}, 600);
+	}
+
+	function handleAlign(type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') {
+		const currentNodes = get(documentStore).nodes.filter((n) => selection.nodes.includes(n.id));
+		const aligned = alignNodes(currentNodes, type);
+		aligned.forEach((n) => documentStore.updateNode(n.id, { position: n.position }));
+	}
+
+	function handleDistribute(type: 'horizontal' | 'vertical') {
+		const currentNodes = get(documentStore).nodes.filter((n) => selection.nodes.includes(n.id));
+		const distributed = distributeNodes(currentNodes, type);
+		distributed.forEach((n) => documentStore.updateNode(n.id, { position: n.position }));
 	}
 
 	function handleTitleSave() {
@@ -180,6 +199,43 @@
 				/>
 			</svg>
 		</button>
+
+		<div class="mx-1 h-5 w-px bg-slate-700"></div>
+
+		<!-- Alignment Tools -->
+		<div
+			class="flex items-center gap-0.5"
+			class:opacity-30={!canAlign}
+			class:pointer-events-none={!canAlign}
+		>
+			<button
+				class="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+				title="Align Left"
+				onclick={() => handleAlign('left')}
+			>
+				<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					><path d="M4 20V4M8 6h12M8 12h8M8 18h10"></path></svg
+				>
+			</button>
+			<button
+				class="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+				title="Align Center"
+				onclick={() => handleAlign('center')}
+			>
+				<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					><path d="M12 4v16M4 6h16M6 12h12M4 18h16"></path></svg
+				>
+			</button>
+			<button
+				class="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+				title="Align Right"
+				onclick={() => handleAlign('right')}
+			>
+				<svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+					><path d="M20 20V4M4 6h12M8 12h8M6 18h10"></path></svg
+				>
+			</button>
+		</div>
 
 		<div class="mx-1 h-5 w-px bg-slate-700"></div>
 

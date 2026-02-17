@@ -11,8 +11,21 @@ export interface Node {
     width?: number; // Optional, some nodes auto-size
     height?: number;
     label: string;
-    color?: string; // e.g. 'indigo', 'red', 'green', 'amber'
+    color?: string; // Legacy/Theme color
     data?: any; // Additional custom data
+    // Visual Styling
+    style?: {
+        fill?: string;
+        stroke?: string;
+        strokeWidth?: number;
+        strokeDasharray?: string;
+        opacity?: number;
+        fontSize?: number;
+        fontFamily?: string;
+        fontWeight?: string;
+        textAlign?: 'left' | 'center' | 'right';
+        color?: string; // Text color
+    };
 }
 
 export interface Edge {
@@ -22,6 +35,16 @@ export interface Edge {
     type?: 'default' | 'step' | 'straight' | 'bezier';
     label?: string;
     waypoints?: { x: number; y: number }[];
+    // Visual Styling
+    animated?: boolean;
+    style?: {
+        stroke?: string;
+        strokeWidth?: number;
+        strokeDasharray?: string;
+        opacity?: number;
+    };
+    markerStart?: string; // e.g. 'arrow', 'circle'
+    markerEnd?: string;
 }
 
 export interface DocumentState {

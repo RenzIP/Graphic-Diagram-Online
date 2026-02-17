@@ -25,6 +25,17 @@
 
 	let isSelected = $derived($selectionStore.edges.includes(edge.id));
 
+	// Visual Styles
+	let strokeColor = $derived(isSelected ? '#6366f1' : edge.style?.stroke || '#64748b');
+	// Increase width on select
+	let strokeWidth = $derived((edge.style?.strokeWidth || 2) + (isSelected ? 1 : 0));
+
+	let strokeDasharray = $derived.by(() => {
+		if (edge.style?.strokeDasharray) return edge.style.strokeDasharray;
+		if (edge.animated) return '5,5'; // Animation usually needs dash
+		return 'none';
+	});
+
 	// Path calculation based on edge type
 	let path = $derived.by(() => {
 		if (edge.waypoints && edge.waypoints.length > 0) {
@@ -101,6 +112,15 @@
 		const val = (e.target as HTMLInputElement).value;
 		documentStore.updateEdge(edge.id, { label: val });
 	}
+
+	// Marker logic
+	let markerEnd = $derived(
+		edge.markerEnd === 'none'
+			? undefined
+			: edge.markerEnd
+				? `url(#marker-${edge.markerEnd})`
+				: 'url(#arrowhead)'
+	);
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -112,11 +132,14 @@
 	<!-- Visible path -->
 	<path
 		d={path}
-		stroke={isSelected ? '#6366f1' : '#64748b'}
-		stroke-width={isSelected ? 3 : 2}
+		stroke={strokeColor}
+		stroke-width={strokeWidth}
+		stroke-dasharray={strokeDasharray}
 		fill="none"
-		marker-end="url(#arrowhead)"
-		class="transition-colors group-hover:stroke-indigo-400"
+		marker-end={markerEnd}
+		class="transition-colors group-hover:stroke-indigo-400 {edge.animated
+			? 'animate-[dash_1s_linear_infinite]'
+			: ''}"
 	/>
 
 	<!-- Label -->
@@ -159,4 +182,13 @@
 	<marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
 		<polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
 	</marker>
+	<!-- Add more markers if needed later, generic fallback is arrowhead -->
 </defs>
+
+<style>
+	@keyframes dash {
+		to {
+			stroke-dashoffset: -20;
+		}
+	}
+</style>

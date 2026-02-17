@@ -22,7 +22,8 @@
 		x={offsetX}
 		y={offsetY}
 	>
-		<circle cx={1} cy={1} r={1 * transform.k} fill="#334155" />
+		<!-- Modern Dot Grid: Fixed size dots, scaling spacing -->
+		<circle cx={1.5} cy={1.5} r={1.5} fill="#334155" />
 	</pattern>
 </defs>
 
