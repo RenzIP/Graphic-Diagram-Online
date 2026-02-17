@@ -18,13 +18,15 @@
 
 	import type { Component } from 'svelte';
 
+	// Mapping of specific components.
+	// IF a type is not listed here, it will fallback to ShapeNode.
 	const nodeTypes: Record<string, Component> = {
+		// Specific Legacy Components (Keep for safety/custom behavior)
 		process: ProcessNode as Component,
 		decision: DecisionNode as Component,
 		'start-end': StartEndNode as Component,
 		entity: EntityNode as Component,
 		actor: ActorNode as Component,
-		// New types
 		attribute: AttributeNode as Component,
 		relationship: RelationshipNode as Component,
 		usecase: UseCaseNode as Component,
@@ -32,32 +34,11 @@
 		text: TextNode as Component,
 		'input-output': InputOutputNode as Component,
 		database: DatabaseNode as Component,
-		circle: AttributeNode as Component, // Reuse attribute node for generic circle
-		triangle: TriangleNode as Component,
+		triangle: TriangleNode as Component
 
-		// Flexible Shapes via ShapeNode
-		note: ShapeNode as Component,
-		cloud: ShapeNode as Component,
-		star: ShapeNode as Component,
-		hexagon: ShapeNode as Component,
-		octagon: ShapeNode as Component,
-		pentagon: ShapeNode as Component,
-		cross: ShapeNode as Component,
-		trapezoid: ShapeNode as Component,
-
-		// Flowchart Extended
-		'manual-input': ShapeNode as Component,
-		'manual-operation': ShapeNode as Component,
-		delay: ShapeNode as Component,
-		display: ShapeNode as Component,
-		'internal-storage': ShapeNode as Component,
-		document: ShapeNode as Component,
-		card: ShapeNode as Component,
-		collate: ShapeNode as Component,
-
-		// Arrows
-		'arrow-left': ShapeNode as Component,
-		'arrow-right': ShapeNode as Component
+		// Explicit mappings to ShapeNode (optional if fallback is ShapeNode, but good for documentation)
+		// We can actually remove the Explicit ShapeNode mappings if we use the fallback!
+		// But let's leave common ones.
 	};
 </script>
 
@@ -66,9 +47,9 @@
 		{#if nodeTypes[node.type]}
 			<svelte:component this={nodeTypes[node.type]} {node} />
 		{:else}
-			<!-- Fallback or unknown type -->
-			<rect width={100} height={50} fill="red" />
-			<text x={50} y={25} text-anchor="middle" fill="white">??</text>
+			<!-- Universal Fallback: Render as generic ShapeNode -->
+			<!-- This covers: rounded, hexagon, star, cloud, note, flowcharts, bpmn, etc. -->
+			<ShapeNode {node} />
 		{/if}
 	</NodeWrapper>
 {/each}

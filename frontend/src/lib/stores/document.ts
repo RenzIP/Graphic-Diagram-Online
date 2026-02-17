@@ -8,12 +8,13 @@ export interface Node {
     id: string;
     type: NodeType;
     position: { x: number; y: number };
-    width?: number; // Optional, some nodes auto-size
+    width?: number;
     height?: number;
-    label: string;
-    color?: string; // Legacy/Theme color
+    label?: string;
+    // Legacy
+    color?: string;
     data?: any; // Additional custom data
-    // Visual Styling
+    // New
     style?: {
         fill?: string;
         stroke?: string;
@@ -22,10 +23,14 @@ export interface Node {
         opacity?: number;
         fontSize?: number;
         fontFamily?: string;
-        fontWeight?: string;
-        textAlign?: 'left' | 'center' | 'right';
+        fontWeight?: string | number;
+        fontStyle?: string;
+        textDecoration?: string;
         color?: string; // Text color
+        shadow?: boolean;
+        gradient?: boolean;
     };
+    locked?: boolean;
 }
 
 export interface Edge {
@@ -129,6 +134,26 @@ function createDocumentStore() {
                     nodes: state.nodes.filter((n) => n.id !== id),
                     edges: state.edges.filter((e) => e.source !== id && e.target !== id)
                 };
+            });
+        },
+
+        moveNodeOrder: (id: string, direction: 'front' | 'back') => {
+            update((state) => {
+                saveHistory(state);
+                const nodeIndex = state.nodes.findIndex((n) => n.id === id);
+                if (nodeIndex === -1) return state;
+
+                const node = state.nodes[nodeIndex];
+                const newNodes = [...state.nodes];
+                newNodes.splice(nodeIndex, 1);
+
+                if (direction === 'front') {
+                    newNodes.push(node);
+                } else {
+                    newNodes.unshift(node);
+                }
+
+                return { ...state, nodes: newNodes };
             });
         },
 

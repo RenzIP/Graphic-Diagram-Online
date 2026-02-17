@@ -38,7 +38,16 @@ export function serializeToText(state: DocumentState, diagramType = 'flowchart',
     // Node definitions
     state.nodes.forEach(node => {
         const dslType = isEndNode(node) ? 'end' : (TYPE_TO_DSL[node.type] || 'process');
-        lines.push(`${dslType} "${node.label}"`);
+
+        if (node.data?.attributes && node.data.attributes.length > 0) {
+            lines.push(`${dslType} "${node.label}" {`);
+            node.data.attributes.forEach((attr: string) => {
+                lines.push(`  ${attr}`);
+            });
+            lines.push(`}`);
+        } else {
+            lines.push(`${dslType} "${node.label}"`);
+        }
     });
 
     if (state.edges.length > 0) {
@@ -51,7 +60,7 @@ export function serializeToText(state: DocumentState, diagramType = 'flowchart',
         const targetLabel = idToLabel[edge.target] || edge.target;
 
         if (edge.label) {
-            lines.push(`"${sourceLabel}" --${edge.label}--> "${targetLabel}"`);
+            lines.push(`"${sourceLabel}" -> "${targetLabel}" : ${edge.label}`);
         } else {
             lines.push(`"${sourceLabel}" -> "${targetLabel}"`);
         }

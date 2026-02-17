@@ -73,7 +73,9 @@ export function transformAST(ast: AST): DocumentState {
                 source: sourceId,
                 target: targetId,
                 label: astEdge.edgeLabel,
-                type: 'straight'
+                target: targetId,
+                label: astEdge.edgeLabel,
+                type: 'step' // Default to orthogonal for clearer flowcharts
             });
             if (!children[sourceId].includes(targetId)) {
                 children[sourceId].push(targetId);
@@ -177,17 +179,71 @@ export function transformAST(ast: AST): DocumentState {
     }
 
     // ── Step 8: Build final nodes ────────────────────────────────────
-    const nodes: Node[] = allIds.map(id => ({
-        id,
-        type: idToType[id],
-        position: {
-            x: isNaN(nodeX[id]) ? 0 : nodeX[id],
-            y: isNaN(nodeY[id]) ? 0 : nodeY[id]
-        },
-        width: NODE_W,
-        height: NODE_H,
-        label: idToLabel[id]
-    }));
+    const nodes: Node[] = allIds.map(id => {
+        // Retrieve AST attributes if available
+        const originalNode = ast.nodes.find(n => (n.label || 'Node') === idToLabel[id] && n.nodeType);
+        const attributes = originalNode?.attributes || [];
+
+        // Dynamic height for entities with attributes
+        let height = NODE_H;
+        if (attributes.length > 0) {
+            height = 30 + (attributes.length * 16) + 10; // Header + items + padding
+        }
+
+        return {
+            id,
+            type: idToType[id],
+            position: {
+                x: isNaN(nodeX[id]) ? 0 : nodeX[id],
+                y: isNaN(nodeY[id]) ? 0 : nodeY[id]
+            },
+            width: NODE_W,
+            height: height,
+            label: idToLabel[id],
+            data: {
+                attributes
+            }
+        };
+    });
+
+    // ── Step 9: Post-processing for ERD Relationships ────────────────
+    // Generate edges from relationship attributes (e.g. "Customer 1")
+    nodes.forEach(node => {
+        if (node.type === 'relationship' && node.data?.attributes) {
+            node.data.attributes.forEach((attr: string) => {
+                // Parse "EntityName Cardinality" e.g. "Customer 1" or "Order N"
+                const match = attr.match(/^"?([^"\s]+)"?\s+([^\s]+)$/);
+                if (match) {
+                    const targetLabel = match[1];
+                    const cardinality = match[2];
+                    const targetId = labelToId[targetLabel];
+
+                    if (targetId) {
+                        // Check if edge already exists to avoid duplicates
+                        const exists = edges.some(e =>
+                            (e.source === node.id && e.target === targetId) ||
+                            (e.source === targetId && e.target === node.id)
+                        );
+
+                        if (!exists) {
+                            edges.push({
+                                id: `e_gen_${node.id}_${targetId}`,
+                                source: node.id,
+                                target: targetId,
+                                label: cardinality,
+                                type: 'straight'
+                            });
+
+                            // Also update hierarchy for layout if needed, 
+                            // but layout is already done. 
+                            // Ideally, this should happen BEFORE layout (Step 2/3), 
+                            // but for now let's just ensure the edge exists.
+                        }
+                    }
+                }
+            });
+        }
+    });
 
     return { nodes, edges };
 }

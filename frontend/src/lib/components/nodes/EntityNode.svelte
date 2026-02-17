@@ -79,14 +79,29 @@
 	>
 		{node.label}
 	</text>
-	<!-- Attribute placeholder -->
-	<text
-		x={w / 2}
-		y={24 + (h - 24) / 2 + 4}
-		text-anchor="middle"
-		class="text-[10px] italic select-none"
-		style="fill: #64748b; font-family: sans-serif; font-size: 10px; font-style: italic;"
-	>
-		(attributes)
-	</text>
+
+	{#if node.data?.attributes && node.data.attributes.length > 0}
+		<!-- Attributes list -->
+		{#each node.data.attributes as attr, i}
+			<text
+				x="10"
+				y={36 + i * 14}
+				class="text-[10px] select-none"
+				style="fill: {theme.bodyStroke}; font-family: monospace; font-size: 10px;"
+			>
+				{attr}
+			</text>
+		{/each}
+	{:else}
+		<!-- Placeholder -->
+		<text
+			x={w / 2}
+			y={24 + (h - 24) / 2 + 4}
+			text-anchor="middle"
+			class="text-[10px] italic select-none"
+			style="fill: #64748b; font-family: sans-serif; font-size: 10px; font-style: italic;"
+		>
+			(attributes)
+		</text>
+	{/if}
 </g>

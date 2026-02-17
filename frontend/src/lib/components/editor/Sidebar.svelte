@@ -14,10 +14,10 @@
 		general: 'General',
 		flowchart: 'Flowchart',
 		arrows: 'Arrows',
+		uml: 'UML / Class / Sequence',
 		erd: 'Entity Relation',
-		usecase: 'UML Use Case',
-		sequence: 'UML Sequence',
-		mindmap: 'Mind Map'
+		bpmn: 'BPMN 2.0',
+		network: 'Cloud / Network'
 	};
 
 	let searchQuery = $state('');
@@ -26,7 +26,7 @@
 	let categories = $derived.by(() => {
 		const allKeys = Object.keys(NODE_SHAPES).filter((k) => k !== 'all' && k !== 'blank');
 		// Fixed order
-		const ORDER = ['general', 'flowchart', 'arrows', 'erd', 'usecase', 'sequence', 'mindmap'];
+		const ORDER = ['general', 'flowchart', 'arrows', 'uml', 'erd', 'bpmn', 'network'];
 
 		// If searching, show all categories that have matches
 		if (searchQuery) {

@@ -50,53 +50,71 @@ export const EDGE_TYPES = [
 export const NODE_SHAPES: Record<string, { type: string; label: string; icon: string }[]> = {
     general: [
         { type: 'process', label: 'Rectangle', icon: '▭' },
-        { type: 'start-end', label: 'Rounded', icon: '▢' },
-        { type: 'text', label: 'Text', icon: 'T' },
-        { type: 'circle', label: 'Circle', icon: '○' },
+        { type: 'rounded', label: 'Rounded', icon: '▢' },
+        { type: 'ellipse', label: 'Ellipse', icon: '○' },
         { type: 'triangle', label: 'Triangle', icon: '△' },
-        { type: 'note', label: 'Note', icon: '📝' },
-        { type: 'cloud', label: 'Cloud', icon: '☁' },
-        { type: 'star', label: 'Star', icon: '★' },
+        { type: 'diamond', label: 'Diamond', icon: '◇' },
+        { type: 'parallelogram', label: 'Parallelogram', icon: '▱' },
         { type: 'hexagon', label: 'Hexagon', icon: '⎔' },
         { type: 'octagon', label: 'Octagon', icon: '🛑' },
-        { type: 'cross', label: 'Cross', icon: '✚' }
+        { type: 'trapezoid', label: 'Trapezoid', icon: '⏢' },
+        { type: 'star', label: 'Star', icon: '★' },
+        { type: 'cloud', label: 'Cloud', icon: '☁' },
+        { type: 'note', label: 'Note', icon: '📝' },
+        { type: 'callout', label: 'Callout', icon: '💬' },
+        { type: 'cylinder', label: 'Cylinder', icon: '⛁' },
+        { type: 'cube', label: 'Cube', icon: '📦' },
+        { type: 'cross', label: 'Cross', icon: '✚' },
+        { type: 'text', label: 'Text', icon: 'T' }
     ],
     flowchart: [
         { type: 'start-end', label: 'Start / End', icon: '⬭' },
         { type: 'process', label: 'Process', icon: '▭' },
         { type: 'decision', label: 'Decision', icon: '◇' },
+        { type: 'terminator', label: 'Terminator', icon: '⬬' },
         { type: 'input-output', label: 'Input / Output', icon: '▱' },
-        { type: 'database', label: 'Database', icon: '⛁' },
-        { type: 'document', label: 'Document', icon: '📄' },
         { type: 'manual-input', label: 'Manual Input', icon: '⌨' },
         { type: 'manual-operation', label: 'Manual Op', icon: '⚙' },
+        { type: 'preparation', label: 'Preparation', icon: '⬡' },
         { type: 'delay', label: 'Delay', icon: 'D' },
         { type: 'display', label: 'Display', icon: '🖥' },
+        { type: 'document', label: 'Document', icon: '📄' },
+        { type: 'multi-document', label: 'Multi-Document', icon: '📚' },
+        { type: 'database', label: 'Database', icon: '⛁' },
         { type: 'internal-storage', label: 'Internal Storage', icon: '▦' },
-        { type: 'card', label: 'Card', icon: '🃏' },
-        { type: 'collate', label: 'Collate', icon: '⧖' }
+        { type: 'collate', label: 'Collate', icon: '⧖' },
+        { type: 'off-page', label: 'Off-Page Connector', icon: '⬇' }
     ],
-    arrows: [
-        { type: 'arrow-left', label: 'Left', icon: '←' },
-        { type: 'arrow-right', label: 'Right', icon: '→' }
+    uml: [
+        { type: 'actor', label: 'Actor', icon: '웃' },
+        { type: 'usecase', label: 'Use Case', icon: '⬭' },
+        { type: 'class', label: 'Class', icon: '▭' },
+        { type: 'interface', label: 'Interface', icon: '○' },
+        { type: 'package', label: 'Package', icon: '📁' },
+        { type: 'note', label: 'Note', icon: '📝' },
+        { type: 'process', label: 'Object', icon: '▭' }
     ],
     erd: [
         { type: 'entity', label: 'Entity', icon: '▭' },
+        { type: 'weak-entity', label: 'Weak Entity', icon: '◳' },
         { type: 'attribute', label: 'Attribute', icon: '○' },
         { type: 'relationship', label: 'Relationship', icon: '◇' }
     ],
-    usecase: [
-        { type: 'actor', label: 'Actor', icon: '웃' },
-        { type: 'usecase', label: 'Use Case', icon: '⬭' },
-        { type: 'process', label: 'System Boundary', icon: '▭' }
+    bpmn: [
+        { type: 'start-event', label: 'Start Event', icon: '○' },
+        { type: 'intermediate-event', label: 'Intermediate', icon: '◎' },
+        { type: 'end-event', label: 'End Event', icon: '◉' },
+        { type: 'gateway', label: 'Gateway', icon: '◇' },
+        { type: 'process', label: 'Task', icon: '▭' }
     ],
-    sequence: [
-        { type: 'lifeline', label: 'Lifeline', icon: '⎅' },
-        { type: 'process', label: 'Activation', icon: '▭' }
+    network: [
+        { type: 'server', label: 'Server', icon: '🖥' },
+        { type: 'database', label: 'DB Server', icon: '⛁' },
+        { type: 'cloud', label: 'Cloud', icon: '☁' }
     ],
-    mindmap: [
-        { type: 'start-end', label: 'Central Topic', icon: '☁' },
-        { type: 'process', label: 'Subtopic', icon: '▭' }
+    arrows: [
+        { type: 'arrow-left', label: 'Left Arrow', icon: '←' },
+        { type: 'arrow-right', label: 'Right Arrow', icon: '→' }
     ]
 };
 
