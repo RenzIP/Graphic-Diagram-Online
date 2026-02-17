@@ -4,13 +4,62 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import { page } from '$app/stores';
+	import { projectsApi } from '$lib/api/projects';
+	import type { Project } from '$lib/api/projects';
+	import { onMount } from 'svelte';
 
-	let workspaceName = $state('Team Alpha');
-	let projects = [
-		{ id: '1', name: 'Q1 Roadmap', docs: 5, updated: '2 hours ago' },
-		{ id: '2', name: 'Marketing Assets', docs: 12, updated: '1 day ago' },
-		{ id: '3', name: 'Backend Docs', docs: 8, updated: '3 days ago' }
-	];
+	let workspaceName = $state('Loading...');
+	let loading = $state(true);
+	let projects = $state<Array<{ id: string; name: string; docs: number; updated: string }>>([]);
+
+	function timeAgo(dateStr: string): string {
+		const now = new Date();
+		const date = new Date(dateStr);
+		const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+		if (diff < 60) return 'just now';
+		if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
+		if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+		return `${Math.floor(diff / 86400)} days ago`;
+	}
+
+	onMount(async () => {
+		const workspaceId = $page.params.id;
+		try {
+			const projectList = await projectsApi.listByWorkspace(workspaceId!);
+			workspaceName = 'Workspace'; // Could fetch workspace name from a separate endpoint
+			projects = projectList.map((p) => ({
+				id: p.id,
+				name: p.name,
+				docs: p.document_count ?? 0,
+				updated: timeAgo(p.created_at)
+			}));
+		} catch (e) {
+			console.error('Failed to load projects:', e);
+			projects = [];
+		} finally {
+			loading = false;
+		}
+	});
+
+	async function createProject() {
+		const workspaceId = $page.params.id;
+		const name = prompt('Project name:');
+		if (!name) return;
+		try {
+			const project = await projectsApi.create({ workspace_id: workspaceId!, name });
+			projects = [
+				...projects,
+				{
+					id: project.id,
+					name: project.name,
+					docs: 0,
+					updated: 'just now'
+				}
+			];
+		} catch (e) {
+			console.error('Failed to create project:', e);
+		}
+	}
 </script>
 
 <div class="flex h-screen overflow-hidden bg-slate-950 text-slate-200">
@@ -66,7 +115,7 @@
 		<div class="flex-1 overflow-y-auto p-8">
 			<div class="mb-8 flex items-center justify-between">
 				<h1 class="text-2xl font-bold text-white">Projects</h1>
-				<Button variant="primary" size="sm">New Project</Button>
+				<Button variant="primary" size="sm" onclick={createProject}>New Project</Button>
 			</div>
 
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">

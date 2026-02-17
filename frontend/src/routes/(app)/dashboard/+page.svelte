@@ -5,34 +5,64 @@
 	import Input from '$lib/components/ui/Input.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { DIAGRAM_TYPES } from '$lib/utils/constants';
+	import { workspacesApi } from '$lib/api/workspaces';
+	import { projectsApi } from '$lib/api/projects';
+	import { documentsApi } from '$lib/api/documents';
+	import type { DocumentMeta } from '$lib/api/documents';
+	import { onMount } from 'svelte';
 
 	let searchQuery = $state('');
 	let showNewDiagramModal = $state(false);
+	let loading = $state(true);
+	let recentDocs = $state<Array<{id: string; title: string; type: string; updated: string; preview: string}>>([]);
 
-	const recentDocs = [
-		{
-			id: '1',
-			title: 'User Login Flow',
-			type: 'Flowchart',
-			updated: '2 mins ago',
-			preview: 'indigo'
-		},
-		{ id: '2', title: 'Database Schema', type: 'ERD', updated: '2 hours ago', preview: 'purple' },
-		{
-			id: '3',
-			title: 'System Architecture',
-			type: 'Use Case',
-			updated: '1 day ago',
-			preview: 'cyan'
-		},
-		{
-			id: '4',
-			title: 'Checkout Process',
-			type: 'Sequence',
-			updated: '3 days ago',
-			preview: 'emerald'
+	const typeColors: Record<string, string> = {
+		flowchart: 'indigo', erd: 'purple', usecase: 'cyan',
+		sequence: 'emerald', mindmap: 'pink', custom: 'slate'
+	};
+
+	function timeAgo(dateStr: string): string {
+		const now = new Date();
+		const date = new Date(dateStr);
+		const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+		if (diff < 60) return 'just now';
+		if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
+		if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+		return `${Math.floor(diff / 86400)} days ago`;
+	}
+
+	onMount(async () => {
+		try {
+			// Fetch all workspaces, then all projects, then all documents
+			const workspaces = await workspacesApi.list();
+			const allDocs: DocumentMeta[] = [];
+
+			for (const ws of workspaces) {
+				const projects = await projectsApi.listByWorkspace(ws.id);
+				for (const proj of projects) {
+					const docs = await documentsApi.listByProject(proj.id);
+					allDocs.push(...docs);
+				}
+			}
+
+			// Sort by updated_at descending
+			allDocs.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+			recentDocs = allDocs.map(doc => ({
+				id: doc.id,
+				title: doc.title,
+				type: doc.diagram_type,
+				updated: timeAgo(doc.updated_at),
+				preview: typeColors[doc.diagram_type] || 'slate'
+			}));
+		} catch (e) {
+			console.error('Failed to load documents:', e);
+			// Graceful fallback — show empty state
+			recentDocs = [];
+		} finally {
+			loading = false;
 		}
-	];
+	});
 
 	let filteredDocs = $derived(
 		searchQuery
@@ -156,6 +186,19 @@
 					<Button variant="ghost" size="sm">View All</Button>
 				</div>
 
+				{#if loading}
+					<div class="flex items-center justify-center py-12">
+						<div class="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500"></div>
+						<span class="ml-3 text-sm text-slate-500">Loading diagrams...</span>
+					</div>
+				{:else if filteredDocs.length === 0}
+					<div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 py-16">
+						<svg class="mb-4 h-12 w-12 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+						</svg>
+						<p class="text-sm text-slate-500">{searchQuery ? 'No diagrams match your search' : 'No diagrams yet. Create your first one above!'}</p>
+					</div>
+				{:else}
 				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 					{#each filteredDocs as doc}
 						<Card
@@ -203,6 +246,7 @@
 						</Card>
 					{/each}
 				</div>
+				{/if}
 			</section>
 		</div>
 	</main>
