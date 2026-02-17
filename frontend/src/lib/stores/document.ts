@@ -1,7 +1,8 @@
 import { writable } from 'svelte/store';
 import { api } from '$lib/utils/api';
+import { historyStore } from './history';
 
-export type NodeType = 'process' | 'decision' | 'start-end' | 'entity' | 'actor' | 'attribute' | 'relationship' | 'usecase' | 'lifeline' | 'text';
+export type NodeType = 'process' | 'decision' | 'start-end' | 'entity' | 'actor' | 'attribute' | 'relationship' | 'usecase' | 'lifeline' | 'text' | 'input-output' | 'database';
 
 export interface Node {
     id: string;
@@ -44,14 +45,8 @@ const initialState: DocumentState = {
 function createDocumentStore() {
     const { subscribe, set, update } = writable<DocumentState>(initialState);
 
-    // History management
-    let history: DocumentState[] = [];
-    let future: DocumentState[] = [];
-
     const saveHistory = (currentState: DocumentState) => {
-        history.push(currentState);
-        if (history.length > 50) history.shift();
-        future = [];
+        historyStore.push(currentState);
     };
 
     return {
@@ -65,8 +60,7 @@ function createDocumentStore() {
                 const doc = await api.getDocument(id);
                 if (doc) {
                     set(doc);
-                    history = [];
-                    future = [];
+                    historyStore.clear();
                     return true;
                 }
                 return false;
@@ -76,64 +70,67 @@ function createDocumentStore() {
             }
         },
         save: async (id: string, title?: string) => {
-            let currentState: DocumentState;
-            update(s => { currentState = s; return s; });
-            await api.saveDocument(id, currentState!, title);
+            try {
+                // Get current state
+                let currentState: DocumentState = initialState; // fallback
+                update(s => { currentState = s; return s; });
+
+                await api.saveDocument(id, currentState, title);
+            } catch (e) {
+                console.error('Store save error:', e);
+                throw e;
+            }
         },
 
-        // Editor Actions
-        undo: () => {
-            update(currentState => {
-                if (history.length === 0) return currentState;
-                const previousState = history.pop()!;
-                future.push(currentState);
-                return previousState;
+        // Node Actions
+        addNode: (node: Node) => {
+            update((state) => {
+                saveHistory(state);
+                return { ...state, nodes: [...state.nodes, node] };
             });
         },
-        redo: () => {
-            update(currentState => {
-                if (future.length === 0) return currentState;
-                const nextState = future.pop()!;
-                history.push(currentState);
-                return nextState;
+        updateNode: (id: string, data: Partial<Node>) => {
+            update((state) => {
+                saveHistory(state);
+                return {
+                    ...state,
+                    nodes: state.nodes.map((n) => (n.id === id ? { ...n, ...data } : n))
+                };
             });
         },
-        addNode: (node: Node) => update(s => {
-            saveHistory(s);
-            return { ...s, nodes: [...s.nodes, node] };
-        }),
-        updateNode: (id: string, partial: Partial<Node>) =>
-            update(s => {
-                saveHistory(s);
+        removeNode: (id: string) => {
+            update((state) => {
+                saveHistory(state);
                 return {
-                    ...s,
-                    nodes: s.nodes.map(n => (n.id === id ? { ...n, ...partial } : n))
+                    ...state,
+                    nodes: state.nodes.filter((n) => n.id !== id),
+                    edges: state.edges.filter((e) => e.source !== id && e.target !== id)
                 };
-            }),
-        removeNode: (id: string) =>
-            update(s => {
-                saveHistory(s);
+            });
+        },
+
+        // Edge Actions
+        addEdge: (edge: Edge) => {
+            update((state) => {
+                saveHistory(state);
+                return { ...state, edges: [...state.edges, edge] };
+            });
+        },
+        updateEdge: (id: string, data: Partial<Edge>) => {
+            update((state) => {
+                saveHistory(state);
                 return {
-                    ...s,
-                    nodes: s.nodes.filter(n => n.id !== id),
-                    edges: s.edges.filter(e => e.source !== id && e.target !== id)
+                    ...state,
+                    edges: state.edges.map((e) => (e.id === id ? { ...e, ...data } : e))
                 };
-            }),
-        addEdge: (edge: Edge) => update(s => {
-            saveHistory(s);
-            return { ...s, edges: [...s.edges, edge] };
-        }),
-        updateEdge: (id: string, partial: Partial<Edge>) => update(s => {
-            saveHistory(s);
-            return {
-                ...s,
-                edges: s.edges.map(e => (e.id === id ? { ...e, ...partial } : e))
-            };
-        }),
-        removeEdge: (id: string) => update(s => {
-            saveHistory(s);
-            return { ...s, edges: s.edges.filter(e => e.id !== id) };
-        })
+            });
+        },
+        removeEdge: (id: string) => {
+            update((state) => {
+                saveHistory(state);
+                return { ...state, edges: state.edges.filter((e) => e.id !== id) };
+            });
+        }
     };
 }
 

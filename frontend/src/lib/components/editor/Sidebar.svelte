@@ -8,79 +8,166 @@
 		diagramType?: string;
 	} = $props();
 
-	let shapes = $derived(NODE_SHAPES[diagramType] || NODE_SHAPES.flowchart);
+	// Map internal types to display names
+	const CATEGORY_NAMES: Record<string, string> = {
+		general: 'General',
+		flowchart: 'Flowchart',
+		arrows: 'Arrows',
+		erd: 'Entity Relation',
+		usecase: 'UML Use Case',
+		sequence: 'UML Sequence',
+		mindmap: 'Mind Map'
+	};
 
-	function addNode(type: string) {
+	// Determine which categories to show
+	let categories = $derived.by(() => {
+		const allKeys = Object.keys(NODE_SHAPES).filter((k) => k !== 'all' && k !== 'blank');
+		// Fixed order
+		const ORDER = ['general', 'flowchart', 'arrows', 'erd', 'usecase', 'sequence', 'mindmap'];
+		return allKeys.sort((a, b) => {
+			const ia = ORDER.indexOf(a);
+			const ib = ORDER.indexOf(b);
+			return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+		});
+	});
+
+	// Track expanded state
+	let expanded = $state<Record<string, boolean>>({
+		tools: false,
+		general: true,
+		[diagramType]: true
+	});
+
+	function toggleCategory(cat: string) {
+		expanded[cat] = !expanded[cat];
+	}
+
+	function addNode(type: string, label: string) {
 		const id = crypto.randomUUID();
 		documentStore.addNode({
 			id,
 			type: type as NodeType,
-			position: { x: 200 + Math.random() * 100, y: 150 + Math.random() * 100 },
+			position: { x: 200 + Math.random() * 50, y: 150 + Math.random() * 50 },
+			// Auto-size or default size based on type?
+			// Generic default:
 			width: 120,
 			height: 60,
-			label: 'New Node'
+			label: label || 'New Node'
 		});
 	}
 </script>
 
-<aside class="flex w-56 flex-col border-r border-slate-800 bg-slate-900">
-	<!-- Header -->
-	<div class="border-b border-slate-800 px-4 py-3">
-		<h3 class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Shapes</h3>
+<aside class="flex w-60 flex-col border-r border-[#303030] bg-[#1e1e1e] select-none">
+	<!-- Tools / Header -->
+	<div class="border-b border-[#303030] px-4 py-3">
+		<h3 class="text-[11px] font-bold tracking-wider text-gray-400 uppercase">Shapes</h3>
 	</div>
 
-	<!-- Shape list -->
-	<div class="flex-1 overflow-y-auto p-3">
-		<div class="space-y-2">
-			{#each shapes as shape}
-				<button
-					class="flex w-full items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2.5 text-left text-sm text-slate-300 transition-all hover:border-indigo-500/50 hover:bg-slate-800 hover:text-white"
-					onclick={() => addNode(shape.type)}
-				>
-					<span class="flex h-8 w-8 items-center justify-center rounded bg-slate-700/50 text-base">
-						{shape.icon}
-					</span>
-					<span class="font-medium">{shape.label}</span>
-				</button>
-			{/each}
+	<!-- Scrollable Content -->
+	<div class="custom-scrollbar flex-1 overflow-y-auto">
+		<!-- Tools Section (Always visible) -->
+		<div class="border-b border-[#303030]">
+			<button
+				class="flex w-full items-center justify-between px-4 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-[#2a2a2a]"
+				onclick={() => toggleCategory('tools')}
+			>
+				<span>General</span>
+				<span class="text-[10px] text-gray-500">{expanded['tools'] !== false ? '▼' : '▶'}</span>
+			</button>
+			{#if expanded['tools'] !== false}
+				<div class="grid grid-cols-4 gap-2 bg-[#1e1e1e] p-3">
+					<!-- Text Tool -->
+					<button
+						class="group relative flex flex-col items-center justify-center rounded p-1 text-gray-400 hover:bg-[#303030] hover:text-white"
+						onclick={() => addNode('text', 'Text')}
+						title="Text"
+					>
+						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M4 6h16M4 12h16M4 18h7"
+							/>
+						</svg>
+					</button>
+					<!-- Connector Tool (just hint) -->
+					<button
+						class="flex flex-col items-center justify-center rounded p-1 text-gray-400 hover:bg-[#303030] hover:text-white"
+						onclick={() => alert('Drag from any node handle to create a connection!')}
+						title="Connection"
+					>
+						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M17 8l4 4m0 0l-4 4m4-4H3"
+							/>
+						</svg>
+					</button>
+				</div>
+			{/if}
 		</div>
 
-		<div class="mt-4 border-t border-slate-800 pt-4">
-			<h4 class="mb-2 text-xs font-semibold tracking-wider text-slate-500 uppercase">Tools</h4>
-			<div class="space-y-2">
-				<button
-					class="flex w-full items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2.5 text-left text-sm text-slate-300 transition-all hover:border-cyan-500/50 hover:bg-slate-800 hover:text-white"
-					onclick={() => addNode('text')}
-				>
-					<span class="flex h-8 w-8 items-center justify-center rounded bg-slate-700/50">
-						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-							/>
-						</svg>
-					</span>
-					<span class="font-medium">Text</span>
-				</button>
-				<button
-					class="flex w-full items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2.5 text-left text-sm text-slate-300 transition-all hover:border-cyan-500/50 hover:bg-slate-800 hover:text-white"
-					onclick={() => alert('Drag from any node handle to create a connection!')}
-				>
-					<span class="flex h-8 w-8 items-center justify-center rounded bg-slate-700/50">
-						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-							/>
-						</svg>
-					</span>
-					<span class="font-medium">Connector</span>
-				</button>
-			</div>
-		</div>
+		<!-- Dynamic Categories -->
+		{#each categories as catKey}
+			{#if NODE_SHAPES[catKey]}
+				<div class="border-b border-[#303030]">
+					<button
+						class="flex w-full items-center justify-between px-4 py-2 text-xs font-semibold text-gray-300 transition-colors hover:bg-[#2a2a2a]"
+						onclick={() => toggleCategory(catKey)}
+					>
+						<span>{CATEGORY_NAMES[catKey] || catKey}</span>
+						<span class="text-[10px] text-gray-500">{expanded[catKey] ? '▼' : '▶'}</span>
+					</button>
+
+					{#if expanded[catKey]}
+						<div class="grid grid-cols-3 gap-2 bg-[#1e1e1e] p-3">
+							{#each NODE_SHAPES[catKey] as shape}
+								<button
+									class="group flex flex-col items-center justify-center rounded border border-transparent p-1.5 transition-all hover:border-[#4a4a4a] hover:bg-[#2a2a2a]"
+									onclick={() => addNode(shape.type, shape.label)}
+									title={shape.label}
+								>
+									<!-- Icon rendering -->
+									<div
+										class="flex h-8 w-8 items-center justify-center text-gray-300 group-hover:text-white"
+									>
+										{#if shape.icon && shape.icon.length < 5}
+											<!-- Emoji/Text Icon -->
+											<span class="text-xl leading-none">{shape.icon}</span>
+										{:else}
+											<!-- SVG Path or image? Assuming text/emoji for now as per constants.ts -->
+											<span class="text-lg">{shape.icon}</span>
+										{/if}
+									</div>
+									<span
+										class="mt-1 w-full truncate text-center text-[9px] text-gray-500 group-hover:text-gray-300"
+										>{shape.label}</span
+									>
+								</button>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			{/if}
+		{/each}
 	</div>
 </aside>
+
+<style>
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 5px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: #1e1e1e;
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: #303030;
+		border-radius: 2px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: #4a4a4a;
+	}
+</style>

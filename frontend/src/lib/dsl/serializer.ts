@@ -10,7 +10,14 @@ const TYPE_TO_DSL: Record<string, string> = {
     'process': 'process',
     'decision': 'decision',
     'entity': 'entity',
-    'actor': 'actor'
+    'actor': 'actor',
+    'input-output': 'io',
+    'database': 'db',
+    'text': 'text',
+    'lifeline': 'lifeline',
+    'usecase': 'usecase',
+    'relationship': 'rel',
+    'attribute': 'attr'
 };
 
 export function serializeToText(state: DocumentState, diagramType = 'flowchart', title = 'Untitled'): string {

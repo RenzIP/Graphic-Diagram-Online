@@ -1,183 +1,228 @@
 <script lang="ts">
-	import { documentStore } from '$lib/stores/document';
 	import { selectionStore } from '$lib/stores/selection';
-	import { NODE_COLORS, EDGE_TYPES } from '$lib/utils/constants';
+	import { documentStore } from '$lib/stores/document';
 
-	// Get the first selected node (if any)
-	let selectedNode = $derived.by(() => {
-		const ids = $selectionStore.nodes;
-		if (ids.length === 0) return null;
-		return $documentStore.nodes.find((n) => n.id === ids[0]) || null;
-	});
+	let selection = $derived($selectionStore);
 
-	let selectedEdge = $derived.by(() => {
-		const ids = $selectionStore.edges;
-		if (ids.length === 0) return null;
-		return $documentStore.edges.find((e) => e.id === ids[0]) || null;
-	});
+	// Derived state for the single selected node
+	let selectedNodeId = $derived(selection.nodes.length === 1 ? selection.nodes[0] : null);
+	let node = $derived(
+		selectedNodeId ? $documentStore.nodes.find((n) => n.id === selectedNodeId) || null : null
+	);
 
-	function updateNodeColor(color: string) {
-		if (!selectedNode) return;
-		documentStore.updateNode(selectedNode.id, { color });
+	// Derived state for selected edge
+	let selectedEdgeId = $derived(selection.edges.length === 1 ? selection.edges[0] : null);
+	let edge = $derived(
+		selectedEdgeId ? $documentStore.edges.find((e) => e.id === selectedEdgeId) || null : null
+	);
+
+	let activeTab = $state('style'); // style, text, arrange
+
+	function updateNode(prop: string, value: any) {
+		if (selectedNodeId) {
+			documentStore.updateNode(selectedNodeId, { [prop]: value });
+		}
 	}
 
-	function updateNodeLabel(e: Event) {
-		if (!selectedNode) return;
-		documentStore.updateNode(selectedNode.id, { label: (e.target as HTMLInputElement).value });
+	function updateEdge(prop: string, value: any) {
+		if (selectedEdgeId) {
+			documentStore.updateEdge(selectedEdgeId, { [prop]: value });
+		}
 	}
 
-	function updateNodeWidth(e: Event) {
-		if (!selectedNode) return;
-		documentStore.updateNode(selectedNode.id, {
-			width: parseInt((e.target as HTMLInputElement).value) || 120
-		});
-	}
-
-	function updateNodeHeight(e: Event) {
-		if (!selectedNode) return;
-		documentStore.updateNode(selectedNode.id, {
-			height: parseInt((e.target as HTMLInputElement).value) || 60
-		});
-	}
-
-	function updateEdgeLabel(e: Event) {
-		if (!selectedEdge) return;
-		documentStore.updateEdge(selectedEdge.id, { label: (e.target as HTMLInputElement).value });
-	}
-
-	function updateEdgeType(type: string) {
-		if (!selectedEdge) return;
-		documentStore.updateEdge(selectedEdge.id, { type: type as any });
-	}
+	const COLORS = [
+		{ name: 'White', value: '#ffffff', border: '#cbd5e1' },
+		{ name: 'Blue', value: '#dbeafe', border: '#3b82f6' },
+		{ name: 'Green', value: '#dcfce7', border: '#22c55e' },
+		{ name: 'Red', value: '#fee2e2', border: '#ef4444' },
+		{ name: 'Yellow', value: '#fef9c3', border: '#eab308' },
+		{ name: 'Purple', value: '#f3e8ff', border: '#a855f7' },
+		{ name: 'Orange', value: '#ffedd5', border: '#f97316' },
+		{ name: 'Gray', value: '#f1f5f9', border: '#64748b' }
+	];
 </script>
 
-<aside class="flex w-64 flex-col border-l border-slate-800 bg-slate-900">
-	<div class="border-b border-slate-800 px-4 py-3">
-		<h3 class="text-xs font-semibold tracking-wider text-slate-500 uppercase">Properties</h3>
-	</div>
+<aside
+	class="flex w-64 flex-col border-l border-[#303030] bg-[#1e1e1e] text-xs text-gray-300 select-none"
+>
+	{#if node || edge}
+		<!-- Tabs -->
+		<div class="flex border-b border-[#303030]">
+			<button
+				class="flex-1 py-2 font-medium transition-colors hover:bg-[#2a2a2a] {activeTab === 'style'
+					? 'border-b-2 border-indigo-500 bg-[#2a2a2a] text-white'
+					: 'text-gray-500'}"
+				onclick={() => (activeTab = 'style')}
+			>
+				Style
+			</button>
+			<button
+				class="flex-1 py-2 font-medium transition-colors hover:bg-[#2a2a2a] {activeTab === 'text'
+					? 'border-b-2 border-indigo-500 bg-[#2a2a2a] text-white'
+					: 'text-gray-500'}"
+				onclick={() => (activeTab = 'text')}
+			>
+				Text
+			</button>
+			<button
+				class="flex-1 py-2 font-medium transition-colors hover:bg-[#2a2a2a] {activeTab === 'arrange'
+					? 'border-b-2 border-indigo-500 bg-[#2a2a2a] text-white'
+					: 'text-gray-500'}"
+				onclick={() => (activeTab = 'arrange')}
+			>
+				Arrange
+			</button>
+		</div>
 
-	<div class="flex-1 overflow-y-auto p-4">
-		{#if selectedNode}
-			<!-- Node Properties -->
-			<div class="space-y-4">
-				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-400">Label</label>
-					<input
-						type="text"
-						value={selectedNode.label}
-						oninput={updateNodeLabel}
-						class="w-full rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-					/>
-				</div>
-
-				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-400">Type</label>
-					<div
-						class="rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-300 capitalize"
-					>
-						{selectedNode.type}
-					</div>
-				</div>
-
-				<div class="grid grid-cols-2 gap-2">
-					<div>
-						<label class="mb-1 block text-xs font-medium text-slate-400">Width</label>
-						<input
-							type="number"
-							value={selectedNode.width || 120}
-							oninput={updateNodeWidth}
-							class="w-full rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-						/>
-					</div>
-					<div>
-						<label class="mb-1 block text-xs font-medium text-slate-400">Height</label>
-						<input
-							type="number"
-							value={selectedNode.height || 60}
-							oninput={updateNodeHeight}
-							class="w-full rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-white focus:border-indigo-500 focus:outline-none"
-						/>
-					</div>
-				</div>
-
-				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-400">Position</label>
-					<div class="grid grid-cols-2 gap-2 text-xs text-slate-400">
-						<div class="rounded border border-slate-700 bg-slate-800 px-3 py-1.5">
-							X: {Math.round(selectedNode.position.x)}
-						</div>
-						<div class="rounded border border-slate-700 bg-slate-800 px-3 py-1.5">
-							Y: {Math.round(selectedNode.position.y)}
+		<div class="custom-scrollbar flex-1 space-y-4 overflow-y-auto p-4">
+			{#if activeTab === 'style'}
+				{#if node}
+					<!-- Color Palette -->
+					<div class="space-y-2">
+						<label class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+							>Fill Color</label
+						>
+						<div class="grid grid-cols-4 gap-2">
+							{#each COLORS as color}
+								<button
+									class="h-6 w-full rounded border transition-transform hover:scale-105"
+									style="background-color: {color.value}; border-color: {color.border}"
+									onclick={() => updateNode('color', color.value)}
+									title={color.name}
+								></button>
+							{/each}
 						</div>
 					</div>
-				</div>
-
-				<div>
-					<label class="mb-2 block text-xs font-medium text-slate-400">Color</label>
-					<div class="flex flex-wrap gap-2">
-						{#each NODE_COLORS as color}
-							<button
-								class="h-6 w-6 rounded-full border-2 transition-transform hover:scale-110 {selectedNode.color ===
-								color.value
-									? 'scale-110 border-white'
-									: 'border-transparent'}"
-								style="background-color: var(--color-{color.value}-500, #6366f1)"
-								onclick={() => updateNodeColor(color.value)}
-								title={color.name}
-								aria-label={color.name}
-							></button>
-						{/each}
+				{/if}
+				{#if edge}
+					<div class="space-y-2">
+						<label class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+							>Line Type</label
+						>
+						<select
+							class="w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1.5 outline-none focus:border-indigo-500"
+							value={edge.type || 'straight'}
+							onchange={(e) => updateEdge('type', e.currentTarget.value)}
+						>
+							<option value="straight">Straight</option>
+							<option value="step">Step</option>
+							<option value="bezier">Bezier</option>
+						</select>
 					</div>
-				</div>
-			</div>
-		{:else if selectedEdge}
-			<!-- Edge Properties -->
-			<div class="space-y-4">
-				<div>
-					<label class="mb-1 block text-xs font-medium text-slate-400">Label</label>
-					<input
-						type="text"
-						value={selectedEdge.label || ''}
-						oninput={updateEdgeLabel}
-						placeholder="Edge label..."
-						class="w-full rounded border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-white placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
-					/>
-				</div>
-
-				<div>
-					<label class="mb-2 block text-xs font-medium text-slate-400">Type</label>
+				{/if}
+			{:else if activeTab === 'text'}
+				<div class="space-y-3">
 					<div class="space-y-1">
-						{#each EDGE_TYPES as type}
-							<button
-								class="w-full rounded border px-3 py-1.5 text-left text-sm transition-colors {selectedEdge.type ===
-								type.id
-									? 'border-indigo-500 bg-indigo-500/10 text-white'
-									: 'border-slate-700 bg-slate-800 text-slate-300 hover:border-slate-600'}"
-								onclick={() => updateEdgeType(type.id)}
-							>
-								{type.name}
-							</button>
-						{/each}
+						<label class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+							>Label Content</label
+						>
+						<textarea
+							class="min-h-[60px] w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1.5 outline-none focus:border-indigo-500"
+							value={node?.label || edge?.label || ''}
+							oninput={(e) =>
+								node
+									? updateNode('label', e.currentTarget.value)
+									: updateEdge('label', e.currentTarget.value)}
+						></textarea>
+					</div>
+					<!-- Mock Font Options -->
+					<div class="pointer-events-none space-y-1 opacity-50" title="Coming soon">
+						<label class="text-[10px] font-semibold tracking-wider text-gray-500 uppercase"
+							>Font</label
+						>
+						<select class="w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1.5">
+							<option>Helvetica</option>
+						</select>
 					</div>
 				</div>
+			{:else if activeTab === 'arrange'}
+				{#if node}
+					<div class="grid grid-cols-2 gap-3">
+						<div class="space-y-1">
+							<label class="text-gray-500">Position X</label>
+							<input
+								type="number"
+								class="w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1"
+								value={Math.round(node.position.x)}
+								oninput={(e) =>
+									updateNode('position', { ...node?.position, x: +e.currentTarget.value })}
+							/>
+						</div>
+						<div class="space-y-1">
+							<label class="text-gray-500">Position Y</label>
+							<input
+								type="number"
+								class="w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1"
+								value={Math.round(node.position.y)}
+								oninput={(e) =>
+									updateNode('position', { ...node?.position, y: +e.currentTarget.value })}
+							/>
+						</div>
+						<div class="space-y-1">
+							<label class="text-gray-500">Width</label>
+							<input
+								type="number"
+								class="w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1"
+								value={node.width || 120}
+								oninput={(e) => updateNode('width', +e.currentTarget.value)}
+							/>
+						</div>
+						<div class="space-y-1">
+							<label class="text-gray-500">Height</label>
+							<input
+								type="number"
+								class="w-full rounded border border-[#3e3e3e] bg-[#2a2a2a] px-2 py-1"
+								value={node.height || 60}
+								oninput={(e) => updateNode('height', +e.currentTarget.value)}
+							/>
+						</div>
+					</div>
+				{/if}
+			{/if}
+		</div>
+	{:else}
+		<div class="flex h-full flex-col items-center justify-center p-4 text-center text-gray-500">
+			<svg class="mb-3 h-10 w-10 opacity-20" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					stroke-width="1.5"
+					d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+				/>
+			</svg>
+			<p>Select an element to edit styles</p>
+			<!-- Diagram Global Settings -->
+			<div class="mt-8 w-full border-t border-[#303030] pt-4 text-left">
+				<h4 class="mb-2 text-[10px] font-semibold tracking-wider text-gray-500 uppercase">
+					Diagram
+				</h4>
+				<div class="space-y-2">
+					<label class="flex items-center gap-2">
+						<input type="checkbox" checked class="rounded border-slate-700 bg-[#2a2a2a]" />
+						<span>Grid</span>
+					</label>
+					<label class="flex items-center gap-2">
+						<input type="checkbox" checked class="rounded border-slate-700 bg-[#2a2a2a]" />
+						<span>Page View</span>
+					</label>
+				</div>
 			</div>
-		{:else}
-			<div class="flex flex-col items-center justify-center py-12 text-center">
-				<svg
-					class="mb-3 h-10 w-10 text-slate-700"
-					fill="none"
-					viewBox="0 0 24 24"
-					stroke="currentColor"
-				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="1.5"
-						d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122"
-					/>
-				</svg>
-				<p class="text-sm text-slate-500">Select a node or edge<br />to view properties</p>
-			</div>
-		{/if}
-	</div>
+		</div>
+	{/if}
 </aside>
+
+<style>
+	.custom-scrollbar::-webkit-scrollbar {
+		width: 5px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-track {
+		background: #1e1e1e;
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb {
+		background: #303030;
+		border-radius: 2px;
+	}
+	.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+		background: #4a4a4a;
+	}
+</style>

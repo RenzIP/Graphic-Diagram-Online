@@ -11,6 +11,10 @@
 	import UseCaseNode from './UseCaseNode.svelte';
 	import LifelineNode from './LifelineNode.svelte';
 	import TextNode from './TextNode.svelte';
+	import InputOutputNode from './InputOutputNode.svelte';
+	import DatabaseNode from './DatabaseNode.svelte';
+	import TriangleNode from './TriangleNode.svelte';
+	import ShapeNode from './ShapeNode.svelte';
 
 	import type { Component } from 'svelte';
 
@@ -25,7 +29,35 @@
 		relationship: RelationshipNode as Component,
 		usecase: UseCaseNode as Component,
 		lifeline: LifelineNode as Component,
-		text: TextNode as Component
+		text: TextNode as Component,
+		'input-output': InputOutputNode as Component,
+		database: DatabaseNode as Component,
+		circle: AttributeNode as Component, // Reuse attribute node for generic circle
+		triangle: TriangleNode as Component,
+
+		// Flexible Shapes via ShapeNode
+		note: ShapeNode as Component,
+		cloud: ShapeNode as Component,
+		star: ShapeNode as Component,
+		hexagon: ShapeNode as Component,
+		octagon: ShapeNode as Component,
+		pentagon: ShapeNode as Component,
+		cross: ShapeNode as Component,
+		trapezoid: ShapeNode as Component,
+
+		// Flowchart Extended
+		'manual-input': ShapeNode as Component,
+		'manual-operation': ShapeNode as Component,
+		delay: ShapeNode as Component,
+		display: ShapeNode as Component,
+		'internal-storage': ShapeNode as Component,
+		document: ShapeNode as Component,
+		card: ShapeNode as Component,
+		collate: ShapeNode as Component,
+
+		// Arrows
+		'arrow-left': ShapeNode as Component,
+		'arrow-right': ShapeNode as Component
 	};
 </script>
 

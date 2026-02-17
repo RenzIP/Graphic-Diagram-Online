@@ -12,7 +12,15 @@ const NODE_TYPE_MAP: Record<string, NodeType> = {
     process: 'process',
     decision: 'decision',
     entity: 'entity',
-    actor: 'actor'
+    actor: 'actor',
+    io: 'input-output',
+    db: 'database',
+    database: 'database',
+    text: 'text',
+    lifeline: 'lifeline',
+    usecase: 'usecase',
+    rel: 'relationship',
+    attr: 'attribute'
 };
 
 const NODE_W = 140;
@@ -29,7 +37,15 @@ export function transformAST(ast: AST): DocumentState {
     ast.nodes.forEach((astNode, index) => {
         const id = `n${index + 1}`;
         const label = astNode.label || 'Node';
-        const mappedType = NODE_TYPE_MAP[astNode.nodeType || 'process'] || 'process';
+        // Check map, or use the type directly if it matches a known NodeType, else default to process
+        let mappedType: NodeType = 'process';
+        const t = astNode.nodeType?.toLowerCase() || 'process';
+
+        if (NODE_TYPE_MAP[t]) {
+            mappedType = NODE_TYPE_MAP[t];
+        } else if (['process', 'decision', 'start-end', 'entity', 'actor', 'attribute', 'relationship', 'usecase', 'lifeline', 'text', 'input-output', 'database'].includes(t)) {
+            mappedType = t as NodeType;
+        }
 
         labelToId[label] = id;
         idToLabel[id] = label;
