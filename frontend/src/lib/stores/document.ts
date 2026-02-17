@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
+import { api } from '$lib/utils/api';
 
-export type NodeType = 'process' | 'decision' | 'start-end' | 'entity' | 'actor';
+export type NodeType = 'process' | 'decision' | 'start-end' | 'entity' | 'actor' | 'attribute' | 'relationship' | 'usecase' | 'lifeline' | 'text';
 
 export interface Node {
     id: string;
@@ -19,6 +20,7 @@ export interface Edge {
     target: string;
     type?: 'default' | 'step' | 'straight' | 'bezier';
     label?: string;
+    waypoints?: { x: number; y: number }[];
 }
 
 export interface DocumentState {
@@ -42,19 +44,44 @@ const initialState: DocumentState = {
 function createDocumentStore() {
     const { subscribe, set, update } = writable<DocumentState>(initialState);
 
+    // History management
     let history: DocumentState[] = [];
     let future: DocumentState[] = [];
 
     const saveHistory = (currentState: DocumentState) => {
         history.push(currentState);
-        if (history.length > 50) history.shift(); // Limit history size
-        future = []; // Clear future on new action
+        if (history.length > 50) history.shift();
+        future = [];
     };
 
     return {
         subscribe,
         set,
         update,
+
+        // API Actions
+        load: async (id: string): Promise<boolean> => {
+            try {
+                const doc = await api.getDocument(id);
+                if (doc) {
+                    set(doc);
+                    history = [];
+                    future = [];
+                    return true;
+                }
+                return false;
+            } catch (e) {
+                console.error('Store load error:', e);
+                return false;
+            }
+        },
+        save: async (id: string, title?: string) => {
+            let currentState: DocumentState;
+            update(s => { currentState = s; return s; });
+            await api.saveDocument(id, currentState!, title);
+        },
+
+        // Editor Actions
         undo: () => {
             update(currentState => {
                 if (history.length === 0) return currentState;

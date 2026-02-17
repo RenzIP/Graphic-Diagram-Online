@@ -7,9 +7,13 @@
 	import { type Point, getSmoothPath } from '$lib/utils/geometry';
 	import { type Snippet } from 'svelte';
 
-	let { children }: { children?: Snippet } = $props();
-
-	let svgElement: SVGSVGElement;
+	let {
+		children,
+		svgElement = $bindable()
+	}: {
+		children?: Snippet;
+		svgElement?: SVGSVGElement;
+	} = $props();
 
 	let isPanning = $state(false);
 	let lastMousePos = $state<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -41,6 +45,7 @@
 		event.preventDefault();
 		if (event.ctrlKey) {
 			// Zoom
+			if (!svgElement) return;
 			const rect = svgElement.getBoundingClientRect();
 			const center = {
 				x: event.clientX - rect.left,
@@ -66,27 +71,31 @@
 	}
 
 	function handleMouseDown(event: MouseEvent) {
-		// If clicking on canvas background (target is svg) and left click
-		if ((event.target as Element).tagName === 'svg' && event.button === 0 && !isSpacePressed) {
-			const scale = $canvasStore.k;
-			const x = (event.clientX - $canvasStore.x) / scale;
-			const y = (event.clientY - $canvasStore.y) / scale;
+		// If clicking on canvas background (target is svg or grid rect)
+		const target = event.target as Element;
+		if ((target.tagName === 'svg' || target.tagName === 'rect') && event.button === 0) {
+			if (event.shiftKey) {
+				// Shift + Click = Selection
+				const scale = $canvasStore.k;
+				const x = (event.clientX - $canvasStore.x) / scale;
+				const y = (event.clientY - $canvasStore.y) / scale;
 
-			selectionBox.active = true;
-			selectionBox.start = { x, y };
-			selectionBox.current = { x, y };
-
-			if (!event.shiftKey) {
+				selectionBox.active = true;
+				selectionBox.start = { x, y };
+				selectionBox.current = { x, y };
 				selectionStore.clear();
-			}
-		} else {
-			// Pan logic
-			// Middle mouse or Space+Left
-			if (event.button === 1 || (event.button === 0 && isSpacePressed)) {
+			} else {
+				// Default Click = Pan
 				isPanning = true;
 				lastMousePos = { x: event.clientX, y: event.clientY };
-				event.preventDefault();
+				// We don't preventDefault here to allow focus events if needed, but for drag it's often good.
+				// event.preventDefault();
 			}
+		} else if (event.button === 1) {
+			// Middle mouse also pans
+			isPanning = true;
+			lastMousePos = { x: event.clientX, y: event.clientY };
+			event.preventDefault();
 		}
 	}
 

@@ -61,6 +61,48 @@ export function getStraightPath(source: Point, target: Point): string {
   return `M ${source.x} ${source.y} L ${target.x} ${target.y}`;
 }
 
+// Catmull-Rom spline to Bezier conversion
+export function getSmoothPolyline(points: Point[]): string {
+  if (points.length < 2) return '';
+  if (points.length === 2) return getStraightPath(points[0], points[1]);
+
+  const path = [`M ${points[0].x} ${points[0].y}`];
+
+  // Helper to get vector
+  const sub = (p1: Point, p2: Point) => ({ x: p1.x - p2.x, y: p1.y - p2.y });
+  const add = (p1: Point, p2: Point) => ({ x: p1.x + p2.x, y: p1.y + p2.y });
+  const mul = (p: Point, s: number) => ({ x: p.x * s, y: p.y * s });
+  const len = (p: Point) => Math.sqrt(p.x * p.x + p.y * p.y);
+
+  // Catmull-Rom to Cubic Bezier
+  // For each segment P[i] -> P[i+1]
+  // Tangents at P[i] (M[i]) = k * (P[i+1] - P[i-1])
+  // CP1 = P[i] + M[i] / 6 * len  (Simplified: Tension=0.5) => M[i] = (P[i+1] - P[i-1])/2
+  // Bezier CP1 = P[i] + (P[i+1]-P[i-1])/6
+  // Bezier CP2 = P[i+1] - (P[i+2]-P[i])/6
+
+  // We need virtual points P[-1] and P[n]
+  // Duplicate endpoints
+  const fullPoints = [points[0], ...points, points[points.length - 1]];
+
+  for (let i = 1; i < fullPoints.length - 2; i++) {
+    const p0 = fullPoints[i - 1]; // Previous
+    const p1 = fullPoints[i];     // Current (Start of segment)
+    const p2 = fullPoints[i + 1]; // Next (End of segment)
+    const p3 = fullPoints[i + 2]; // Next Next
+
+    // Calculate control points
+    // CP1 = P1 + (P2 - P0) / 6
+    const cp1 = add(p1, mul(sub(p2, p0), 1 / 6));
+    // CP2 = P2 - (P3 - P1) / 6
+    const cp2 = sub(p2, mul(sub(p3, p1), 1 / 6));
+
+    path.push(`C ${cp1.x} ${cp1.y}, ${cp2.x} ${cp2.y}, ${p2.x} ${p2.y}`);
+  }
+
+  return path.join(' ');
+}
+
 export function getOrthogonalPath(
   source: Point,
   target: Point,

@@ -1,5 +1,10 @@
 <script lang="ts">
-	import { getSmoothPath, getStraightPath, getOrthogonalPath } from '$lib/utils/geometry';
+	import {
+		getSmoothPath,
+		getStraightPath,
+		getOrthogonalPath,
+		getSmoothPolyline
+	} from '$lib/utils/geometry';
 	import { documentStore, type Edge, type Node } from '$lib/stores/document';
 	import { selectionStore } from '$lib/stores/selection';
 
@@ -22,6 +27,23 @@
 
 	// Path calculation based on edge type
 	let path = $derived.by(() => {
+		if (edge.waypoints && edge.waypoints.length > 0) {
+			// Respect edge type for waypoints
+			if (edge.type === 'straight') {
+				const points = [
+					`M ${sourceCenter.x} ${sourceCenter.y}`,
+					...edge.waypoints.map((p) => `L ${p.x} ${p.y}`),
+					`L ${targetCenter.x} ${targetCenter.y}`
+				];
+				return points.join(' ');
+			} else {
+				// Default/Bezier => Smooth Curve through Waypoints
+				// Include source/target in the smoothing
+				const fullPoints = [sourceCenter, ...edge.waypoints, targetCenter];
+				return getSmoothPolyline(fullPoints);
+			}
+		}
+
 		switch (edge.type) {
 			case 'step':
 				return getOrthogonalPath(sourceCenter, targetCenter);

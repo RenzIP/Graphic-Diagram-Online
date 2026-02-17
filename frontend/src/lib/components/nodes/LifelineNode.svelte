@@ -12,22 +12,34 @@
 		cyan: 'fill: rgba(22, 78, 99, 0.4); stroke: #06b6d4;'
 	};
 
-	let width = $derived(node.width || 100);
-	let height = $derived(node.height || 100);
-	let halfW = $derived((node.width || 100) / 2);
-	let halfH = $derived((node.height || 100) / 2);
 	let styleStr = $derived(styleMap[node.color || 'slate'] || styleMap.slate);
+	let w = $derived(node.width || 120);
+	// Head height fixed or prop? NodeWrapper uses node.height for bounds.
+	// Lifeline usually has a box at top and line down.
+	// We'll use node.height for the box size, but draw a line extending down?
+	// NodeWrapper handles selection box based on node.width/height.
+	// If we want a long line, the node height should ostensibly include it, or we draw outside bounds.
+	// If we draw outside bounds, selection box won't cover it.
+	// Let's assume node.height IS the lifeline length.
+	// But usually you resize lifeline length.
+	let h = $derived(node.height || 300);
+	let headH = 50;
 </script>
 
 <g class="group">
-	<polygon
-		points="{halfW},0 {width},{halfH} {halfW},{height} 0,{halfH}"
+	<!-- Head Box -->
+	<rect
+		width={w}
+		height={headH}
+		rx="4"
 		class="stroke-2 transition-colors group-hover:!stroke-indigo-400"
 		style={styleStr}
 	/>
+
+	<!-- Label in Head -->
 	<text
-		x={halfW}
-		y={halfH}
+		x={w / 2}
+		y={headH / 2}
 		dominant-baseline="middle"
 		text-anchor="middle"
 		class="pointer-events-none text-sm font-medium select-none"
@@ -35,4 +47,16 @@
 	>
 		{node.label}
 	</text>
+
+	<!-- Dashed Line -->
+	<line
+		x1={w / 2}
+		y1={headH}
+		x2={w / 2}
+		y2={h}
+		stroke="currentColor"
+		stroke-width="2"
+		stroke-dasharray="8 8"
+		class="text-slate-500"
+	/>
 </g>

@@ -10,6 +10,8 @@ interface CanvasState {
         sourceHandle: 'top' | 'right' | 'bottom' | 'left';
         mousePos: { x: number; y: number };
         candidateNodeId?: string;
+        modifyingEdgeId?: string; // If set, we are reconnecting an existing edge
+        isReversed?: boolean; // If true, we are dragging the source handle (reconnecting source)
     };
 }
 
@@ -37,8 +39,14 @@ function createCanvasStore() {
                     k: newK
                 };
             }),
-        startConnection: (nodeId: string, handle: 'top' | 'right' | 'bottom' | 'left', mousePos: { x: number, y: number }) =>
-            update(s => ({ ...s, connecting: { sourceNodeId: nodeId, sourceHandle: handle, mousePos } })),
+        startConnection: (
+            nodeId: string,
+            handle: 'top' | 'right' | 'bottom' | 'left',
+            mousePos: { x: number, y: number },
+            modifyingEdgeId?: string,
+            isReversed: boolean = false
+        ) =>
+            update(s => ({ ...s, connecting: { sourceNodeId: nodeId, sourceHandle: handle, mousePos, modifyingEdgeId, isReversed } })),
         updateConnection: (mousePos: { x: number, y: number }, candidateNodeId?: string) =>
             update(s => s.connecting ? { ...s, connecting: { ...s.connecting, mousePos, candidateNodeId } } : s),
         endConnection: () => update(s => {

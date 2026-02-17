@@ -6,6 +6,11 @@
 	import StartEndNode from './StartEndNode.svelte';
 	import EntityNode from './EntityNode.svelte';
 	import ActorNode from './ActorNode.svelte';
+	import AttributeNode from './AttributeNode.svelte';
+	import RelationshipNode from './RelationshipNode.svelte';
+	import UseCaseNode from './UseCaseNode.svelte';
+	import LifelineNode from './LifelineNode.svelte';
+	import TextNode from './TextNode.svelte';
 
 	import type { Component } from 'svelte';
 
@@ -14,7 +19,13 @@
 		decision: DecisionNode as Component,
 		'start-end': StartEndNode as Component,
 		entity: EntityNode as Component,
-		actor: ActorNode as Component
+		actor: ActorNode as Component,
+		// New types
+		attribute: AttributeNode as Component,
+		relationship: RelationshipNode as Component,
+		usecase: UseCaseNode as Component,
+		lifeline: LifelineNode as Component,
+		text: TextNode as Component
 	};
 </script>
 

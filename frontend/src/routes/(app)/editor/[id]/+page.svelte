@@ -2,6 +2,7 @@
 	import Canvas from '$lib/components/canvas/Canvas.svelte';
 	import NodeRenderer from '$lib/components/nodes/NodeRenderer.svelte';
 	import EdgeRenderer from '$lib/components/edges/EdgeRenderer.svelte';
+	import EdgeHandleRenderer from '$lib/components/edges/EdgeHandleRenderer.svelte';
 	import FloatingToolbar from '$lib/components/editor/FloatingToolbar.svelte';
 	import Toolbar from '$lib/components/editor/Toolbar.svelte';
 	import EditorSidebar from '$lib/components/editor/Sidebar.svelte';
@@ -11,8 +12,11 @@
 	import Toast from '$lib/components/ui/Toast.svelte';
 	import { documentStore } from '$lib/stores/document';
 	import { historyStore } from '$lib/stores/history';
+	import { selectionStore } from '$lib/stores/selection';
 	import { get } from 'svelte/store';
 	import { page } from '$app/stores';
+
+	import { DIAGRAM_TEMPLATES } from '$lib/utils/templates';
 
 	let { data } = $props();
 
@@ -21,7 +25,70 @@
 	let showDslEditor = $state(false);
 	let isLeftSidebarOpen = $state(true);
 	let isRightSidebarOpen = $state(true);
-	let svgRef: SVGSVGElement | null = null;
+	let svgRef = $state<SVGSVGElement | undefined>(undefined);
+
+	// Load document on mount or id change
+	let isInitialized = false;
+
+	$effect(() => {
+		const id = $page.params.id;
+		const type = $page.url.searchParams.get('type') || 'flowchart';
+
+		if (type) {
+			diagramType = type;
+		}
+
+		if (id) {
+			// Load Strategy: API -> LocalStorage -> Template
+			documentStore.load(id).then((found) => {
+				if (found) {
+					console.log('Loaded from API');
+					isInitialized = true;
+				} else {
+					// Try LocalStorage
+					const localKey = `diagram-${id}`;
+					const localData = localStorage.getItem(localKey);
+
+					if (localData) {
+						try {
+							documentStore.set(JSON.parse(localData));
+							console.log('Loaded from LocalStorage');
+							isInitialized = true;
+						} catch (e) {
+							console.error('Failed to parse local data', e);
+							loadTemplate(type);
+						}
+					} else {
+						loadTemplate(type);
+					}
+				}
+			});
+		}
+	});
+
+	function loadTemplate(type: string) {
+		if (DIAGRAM_TEMPLATES[type]) {
+			documentStore.set(JSON.parse(JSON.stringify(DIAGRAM_TEMPLATES[type])));
+			console.log('Loaded Template:', type);
+		}
+		isInitialized = true;
+	}
+
+	// Auto-save to LocalStorage
+	$effect(() => {
+		const id = $page.params.id;
+		if (!id || !isInitialized) return;
+
+		const unsubscribe = documentStore.subscribe((state) => {
+			if (isInitialized) {
+				localStorage.setItem(`diagram-${id}`, JSON.stringify(state));
+			}
+		});
+
+		return () => {
+			unsubscribe();
+		};
+	});
 
 	function handleTitleChange(newTitle: string) {
 		diagramTitle = newTitle;
@@ -50,11 +117,45 @@
 					break;
 				case 's':
 					e.preventDefault();
-					// Trigger save via toast
-					if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
-						(window as any).__gradiol_toast('Document saved', 'success');
+					// Save document
+					const id = $page.params.id;
+					if (id) {
+						documentStore
+							.save(id, diagramTitle)
+							.then(() => {
+								if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
+									(window as any).__gradiol_toast('Document saved', 'success');
+								}
+							})
+							.catch((err) => {
+								console.error(err);
+								if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
+									(window as any).__gradiol_toast('Failed to save', 'error');
+								}
+							});
 					}
 					break;
+			}
+		}
+
+		// Delete handling
+		if (key === 'delete' || key === 'backspace') {
+			// Prevent deleting if editing text
+			if (
+				(e.target as HTMLElement).tagName === 'INPUT' ||
+				(e.target as HTMLElement).tagName === 'TEXTAREA'
+			)
+				return;
+
+			const selection = get(selectionStore);
+			if (selection.nodes.length > 0) {
+				selection.nodes.forEach((id) => documentStore.removeNode(id));
+				selectionStore.clear(); // Clear selection after delete
+			}
+			if (selection.edges.length > 0) {
+				selection.edges.forEach((id) => documentStore.removeEdge(id));
+				// If we cleared selection above, this is redundant but safe
+				if (selection.nodes.length === 0) selectionStore.clear();
 			}
 		}
 
@@ -70,7 +171,7 @@
 
 <div class="flex h-screen w-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
 	<!-- Top Toolbar -->
-	<Toolbar title={diagramTitle} {diagramType} onTitleChange={handleTitleChange} svgRef={null} />
+	<Toolbar title={diagramTitle} {diagramType} onTitleChange={handleTitleChange} {svgRef} />
 
 	<div class="relative flex flex-1 overflow-hidden">
 		<!-- Left Sidebar (Shape Palette) -->
@@ -81,9 +182,10 @@
 		<!-- Main Canvas Area -->
 		<main class="relative flex flex-1 flex-col bg-slate-950">
 			<div class="relative flex-1">
-				<Canvas>
+				<Canvas bind:svgElement={svgRef}>
 					<EdgeRenderer />
 					<NodeRenderer />
+					<EdgeHandleRenderer />
 				</Canvas>
 
 				<FloatingToolbar />

@@ -12,22 +12,23 @@
 		cyan: 'fill: rgba(22, 78, 99, 0.4); stroke: #06b6d4;'
 	};
 
-	let width = $derived(node.width || 100);
-	let height = $derived(node.height || 100);
-	let halfW = $derived((node.width || 100) / 2);
-	let halfH = $derived((node.height || 100) / 2);
 	let styleStr = $derived(styleMap[node.color || 'slate'] || styleMap.slate);
+	let rx = $derived((node.width || 120) / 2);
+	let ry = $derived((node.height || 60) / 2);
 </script>
 
 <g class="group">
-	<polygon
-		points="{halfW},0 {width},{halfH} {halfW},{height} 0,{halfH}"
+	<ellipse
+		cx={rx}
+		cy={ry}
+		{rx}
+		{ry}
 		class="stroke-2 transition-colors group-hover:!stroke-indigo-400"
 		style={styleStr}
 	/>
 	<text
-		x={halfW}
-		y={halfH}
+		x={rx}
+		y={ry}
 		dominant-baseline="middle"
 		text-anchor="middle"
 		class="pointer-events-none text-sm font-medium select-none"

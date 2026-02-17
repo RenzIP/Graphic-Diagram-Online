@@ -175,15 +175,26 @@
 	onmouseup={(e) => {
 		if ($canvasStore.connecting && $canvasStore.connecting.sourceNodeId !== node.id) {
 			e.stopPropagation();
-			const { sourceNodeId, sourceHandle } = $canvasStore.connecting;
+			const { sourceNodeId, sourceHandle, modifyingEdgeId, isReversed } = $canvasStore.connecting;
 
-			// Create edge
-			documentStore.addEdge({
-				id: crypto.randomUUID(),
-				source: sourceNodeId,
-				target: node.id,
-				type: 'default'
-			});
+			if (modifyingEdgeId) {
+				// Reconnecting existing edge
+				if (isReversed) {
+					// Dragged source handle -> update source
+					documentStore.updateEdge(modifyingEdgeId, { source: node.id });
+				} else {
+					// Dragged target handle -> update target
+					documentStore.updateEdge(modifyingEdgeId, { target: node.id });
+				}
+			} else {
+				// Create new edge
+				documentStore.addEdge({
+					id: crypto.randomUUID(),
+					source: sourceNodeId,
+					target: node.id,
+					type: 'straight'
+				});
+			}
 
 			canvasStore.endConnection();
 		}

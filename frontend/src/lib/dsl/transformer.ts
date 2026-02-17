@@ -43,7 +43,7 @@ export function transformAST(ast: AST): DocumentState {
     const edges: Edge[] = [];
     const children: Record<string, string[]> = {};   // nodeId → [target ids]
     const parents: Record<string, string[]> = {};    // nodeId → [source ids]
-    const allIds = Object.values(labelToId);
+    const allIds = Array.from(new Set(Object.values(labelToId)));
 
     allIds.forEach(id => { children[id] = []; parents[id] = []; });
 
@@ -57,7 +57,7 @@ export function transformAST(ast: AST): DocumentState {
                 source: sourceId,
                 target: targetId,
                 label: astEdge.edgeLabel,
-                type: 'default'
+                type: 'straight'
             });
             if (!children[sourceId].includes(targetId)) {
                 children[sourceId].push(targetId);
@@ -88,24 +88,34 @@ export function transformAST(ast: AST): DocumentState {
             if (!visited.has(childId)) {
                 visited.add(childId);
                 queue.push({ id: childId, depth: depth + 1 });
-            } else {
-                // Already visited — but if this path gives a deeper layer, update
-                if (depth + 1 > (layer[childId] ?? 0)) {
-                    layer[childId] = depth + 1;
-                    queue.push({ id: childId, depth: depth + 1 });
-                }
             }
         }
     }
 
-    // Also assign layers for any disconnected nodes
-    allIds.forEach(id => { if (layer[id] === undefined) layer[id] = 0; });
+    // Also assign layers for any disconnected nodes that weren't reached
+    let currentMaxLayer = Math.max(...Object.values(layer), -1);
+    allIds.forEach(id => {
+        if (layer[id] === undefined) {
+            // If node has no layer, start a new component at 0? 
+            // Or better, just put them in layer 0 for now but ensure they don't overlap too much?
+            // Actually, the BFS above starts from ALL roots.
+            // If a node is part of a cycle but has no root (e.g. A->B->A), it might be missed if we only start from parents[id].length===0
+            // Let's find unvisited nodes and run BFS/DFS on them too.
+            layer[id] = 0;
+        }
+    });
 
     // ── Step 5: Group nodes by layer ─────────────────────────────────
     const maxLayer = Math.max(...Object.values(layer), 0);
     const layers: string[][] = [];
     for (let i = 0; i <= maxLayer; i++) layers.push([]);
-    allIds.forEach(id => layers[layer[id]].push(id));
+
+    // Sort to ensure consistent order
+    allIds.sort();
+    allIds.forEach(id => {
+        const l = layer[id] ?? 0;
+        if (layers[l]) layers[l].push(id);
+    });
 
     // ── Step 6: Order nodes within each layer to reduce crossings ────
     // Use median heuristic: order by average position of parents
@@ -154,7 +164,10 @@ export function transformAST(ast: AST): DocumentState {
     const nodes: Node[] = allIds.map(id => ({
         id,
         type: idToType[id],
-        position: { x: nodeX[id], y: nodeY[id] },
+        position: {
+            x: isNaN(nodeX[id]) ? 0 : nodeX[id],
+            y: isNaN(nodeY[id]) ? 0 : nodeY[id]
+        },
         width: NODE_W,
         height: NODE_H,
         label: idToLabel[id]

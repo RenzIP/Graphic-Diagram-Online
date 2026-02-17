@@ -54,18 +54,21 @@ export const NODE_SHAPES: Record<string, { type: string; label: string; icon: st
     ],
     erd: [
         { type: 'entity', label: 'Entity', icon: '▭' },
-        { type: 'process', label: 'Attribute', icon: '○' }
+        { type: 'attribute', label: 'Attribute', icon: '⬭' },
+        { type: 'relationship', label: 'Relationship', icon: '◇' }
     ],
     usecase: [
         { type: 'actor', label: 'Actor', icon: '🧑' },
-        { type: 'process', label: 'Use Case', icon: '⬭' }
+        { type: 'usecase', label: 'Use Case', icon: '⬭' },
+        { type: 'process', label: 'System', icon: '▭' }
     ],
     sequence: [
-        { type: 'process', label: 'Participant', icon: '▭' }
+        { type: 'lifeline', label: 'Lifeline', icon: '⎅' },
+        { type: 'process', label: 'Activation', icon: '▭' }
     ],
     mindmap: [
-        { type: 'process', label: 'Topic', icon: '▭' },
-        { type: 'start-end', label: 'Central', icon: '⬭' }
+        { type: 'start-end', label: 'Central Topic', icon: '⬭' },
+        { type: 'process', label: 'Subtopic', icon: '▭' }
     ]
 };
 

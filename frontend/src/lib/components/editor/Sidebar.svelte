@@ -50,6 +50,7 @@
 			<div class="space-y-2">
 				<button
 					class="flex w-full items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2.5 text-left text-sm text-slate-300 transition-all hover:border-cyan-500/50 hover:bg-slate-800 hover:text-white"
+					onclick={() => addNode('text')}
 				>
 					<span class="flex h-8 w-8 items-center justify-center rounded bg-slate-700/50">
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -65,6 +66,7 @@
 				</button>
 				<button
 					class="flex w-full items-center gap-3 rounded-lg border border-slate-800 bg-slate-800/50 px-3 py-2.5 text-left text-sm text-slate-300 transition-all hover:border-cyan-500/50 hover:bg-slate-800 hover:text-white"
+					onclick={() => alert('Drag from any node handle to create a connection!')}
 				>
 					<span class="flex h-8 w-8 items-center justify-center rounded bg-slate-700/50">
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
