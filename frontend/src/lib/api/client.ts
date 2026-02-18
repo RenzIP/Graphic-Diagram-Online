@@ -51,6 +51,17 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
     if (!response.ok) {
         const errorData = await response.json().catch(() => null);
+
+        // 401 Unauthorized — token expired or invalid → redirect to login
+        if (response.status === 401 && typeof window !== 'undefined') {
+            localStorage.removeItem('auth_token');
+            document.cookie = 'auth_token=; path=/; max-age=0; SameSite=Lax';
+            const currentPath = window.location.pathname;
+            if (currentPath !== '/login' && currentPath !== '/register') {
+                window.location.href = `/login?redirect=${encodeURIComponent(currentPath)}`;
+            }
+        }
+
         throw new ApiError(
             response.status,
             errorData?.message || `Request failed: ${response.statusText}`,

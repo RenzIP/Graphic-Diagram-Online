@@ -2,8 +2,9 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { supabase, storeAuthToken } from '$lib/supabase';
+	import { supabase } from '$lib/supabase';
 	import { authApi } from '$lib/api/auth';
+	import { setAuthUser } from '$lib/stores/auth';
 
 	let status = $state<'loading' | 'error'>('loading');
 	let errorMessage = $state('');
@@ -54,11 +55,8 @@
 			refresh_token: refreshToken
 		});
 
-		// Store the backend JWT token for subsequent API calls
-		storeAuthToken(result.token);
-
-		// Also set cookie for SSR auth guard (hooks.server.ts reads this)
-		document.cookie = `auth_token=${result.token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax`;
+		// Update global auth state (handles localStorage + cookie + reactive state)
+		setAuthUser(result.user, result.token);
 
 		// Navigate to the target page
 		await goto(redirectTo, { replaceState: true });
