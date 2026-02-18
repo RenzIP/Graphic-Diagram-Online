@@ -29,11 +29,11 @@ export function serializeToText(state: DocumentState, diagramType = 'flowchart',
 
     // Build ID → label map
     const idToLabel: Record<string, string> = {};
-    state.nodes.forEach(n => { idToLabel[n.id] = n.label; });
+    state.nodes.forEach(n => { idToLabel[n.id] = n.label ?? n.id; });
 
     // Detect if last node is "End" type
     const isEndNode = (n: Node) =>
-        n.type === 'start-end' && n.label.toLowerCase().includes('end');
+        n.type === 'start-end' && (n.label ?? '').toLowerCase().includes('end');
 
     // Node definitions
     state.nodes.forEach(node => {

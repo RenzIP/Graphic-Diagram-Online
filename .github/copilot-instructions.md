@@ -56,7 +56,7 @@ cd backend && go test ./...            # Run tests
 - **Import paths:** Always use `$lib/...` aliases, never relative `../../`
 - **API contract:** All endpoints defined in `docs/spec/03-api-contract.json` — responses use `{ data: [...], meta: { page, per_page, total, total_pages } }` for lists
 - **Error responses:** `{ code: "NOT_FOUND", message: "..." }` — codes: `BAD_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `CONFLICT`, `UNPROCESSABLE`, `RATE_LIMITED`, `INTERNAL_ERROR`
-- **Env vars (frontend):** Prefix with `VITE_` for client-side, `PUBLIC_` for Supabase keys
+- **Env vars (frontend):** Prefix with `VITE_` for client-side (e.g. `VITE_API_URL`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`)
 - **Diagram types (MVP):** Only `'flowchart' | 'erd' | 'usecase'` — validated by backend CHECK constraint
 - **Node types:** See `NodeType` in `lib/stores/document.ts` — `'process' | 'decision' | 'start-end' | 'entity' | 'actor' | ...`
 - **Svelte 5:** Uses `$state()`, `$effect()`, `$props()` runes syntax — not legacy `let` reactivity

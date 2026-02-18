@@ -2,23 +2,33 @@
 	import AppSidebar from '$lib/components/layout/AppSidebar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
-	import Input from '$lib/components/ui/Input.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
+	import Input from '$lib/components/ui/Input.svelte';
 	import { DIAGRAM_TYPES } from '$lib/utils/constants';
 	import { workspacesApi } from '$lib/api/workspaces';
-	import { projectsApi } from '$lib/api/projects';
 	import { documentsApi } from '$lib/api/documents';
-	import type { DocumentMeta } from '$lib/api/documents';
+	import type { RecentDocumentItem, Workspace, DiagramType } from '$lib/api/types';
 	import { onMount } from 'svelte';
 
 	let searchQuery = $state('');
 	let showNewDiagramModal = $state(false);
+	let showNewWorkspaceModal = $state(false);
 	let loading = $state(true);
-	let recentDocs = $state<Array<{id: string; title: string; type: string; updated: string; preview: string}>>([]);
+	let recentDocs = $state<RecentDocumentItem[]>([]);
+	let workspaces = $state<Workspace[]>([]);
+
+	// New workspace form
+	let newWsName = $state('');
+	let newWsDescription = $state('');
+	let creatingWs = $state(false);
+
+	// New diagram form
+	let selectedWorkspaceId = $state('');
+	let newDiagramTitle = $state('');
+	let creatingDiagram = $state(false);
 
 	const typeColors: Record<string, string> = {
-		flowchart: 'indigo', erd: 'purple', usecase: 'cyan',
-		sequence: 'emerald', mindmap: 'pink', custom: 'slate'
+		flowchart: 'indigo', erd: 'purple', usecase: 'cyan'
 	};
 
 	function timeAgo(dateStr: string): string {
@@ -33,32 +43,20 @@
 
 	onMount(async () => {
 		try {
-			// Fetch all workspaces, then all projects, then all documents
-			const workspaces = await workspacesApi.list();
-			const allDocs: DocumentMeta[] = [];
-
-			for (const ws of workspaces) {
-				const projects = await projectsApi.listByWorkspace(ws.id);
-				for (const proj of projects) {
-					const docs = await documentsApi.listByProject(proj.id);
-					allDocs.push(...docs);
-				}
+			// Fetch recent documents and workspaces in parallel
+			const [recentRes, wsRes] = await Promise.all([
+				documentsApi.recent(10),
+				workspacesApi.list({ per_page: 50 })
+			]);
+			recentDocs = recentRes;
+			workspaces = wsRes.data;
+			if (workspaces.length > 0) {
+				selectedWorkspaceId = workspaces[0].id;
 			}
-
-			// Sort by updated_at descending
-			allDocs.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
-
-			recentDocs = allDocs.map(doc => ({
-				id: doc.id,
-				title: doc.title,
-				type: doc.diagram_type,
-				updated: timeAgo(doc.updated_at),
-				preview: typeColors[doc.diagram_type] || 'slate'
-			}));
 		} catch (e) {
-			console.error('Failed to load documents:', e);
-			// Graceful fallback — show empty state
+			console.error('Failed to load dashboard data:', e);
 			recentDocs = [];
+			workspaces = [];
 		} finally {
 			loading = false;
 		}
@@ -69,14 +67,54 @@
 			? recentDocs.filter(
 					(d) =>
 						d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						d.type.toLowerCase().includes(searchQuery.toLowerCase())
+						d.diagram_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+						(d.workspace_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
 				)
 			: recentDocs
 	);
 
-	function createDiagram(typeId: string) {
-		showNewDiagramModal = false;
-		window.location.href = `/editor/${crypto.randomUUID()}?type=${typeId}`;
+	async function createDiagram(typeId: string) {
+		if (!selectedWorkspaceId) {
+			// If no workspace exists, prompt to create one first
+			showNewDiagramModal = false;
+			showNewWorkspaceModal = true;
+			return;
+		}
+		creatingDiagram = true;
+		try {
+			const doc = await documentsApi.create({
+				workspace_id: selectedWorkspaceId,
+				title: newDiagramTitle.trim() || 'Untitled',
+				diagram_type: typeId as DiagramType
+			});
+			showNewDiagramModal = false;
+			newDiagramTitle = '';
+			window.location.href = `/editor/${doc.id}`;
+		} catch (e) {
+			console.error('Failed to create diagram:', e);
+		} finally {
+			creatingDiagram = false;
+		}
+	}
+
+	async function createWorkspace() {
+		if (!newWsName.trim()) return;
+		creatingWs = true;
+		try {
+			const ws = await workspacesApi.create({
+				name: newWsName.trim(),
+				description: newWsDescription.trim() || undefined
+			});
+			workspaces = [...workspaces, ws];
+			if (!selectedWorkspaceId) selectedWorkspaceId = ws.id;
+			showNewWorkspaceModal = false;
+			newWsName = '';
+			newWsDescription = '';
+		} catch (e) {
+			console.error('Failed to create workspace:', e);
+		} finally {
+			creatingWs = false;
+		}
 	}
 </script>
 
@@ -135,7 +173,7 @@
 				<div class="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
 					<button
 						class="group flex flex-col items-center rounded-xl border border-dashed border-slate-700 p-4 text-left transition-colors hover:border-indigo-500 hover:bg-slate-900"
-						onclick={() => (window.location.href = `/editor/${crypto.randomUUID()}`)}
+						onclick={() => (showNewDiagramModal = true)}
 					>
 						<div
 							class="mb-3 flex aspect-video w-full items-center justify-center rounded-lg bg-indigo-500/10 transition-colors group-hover:bg-indigo-500/20"
@@ -183,7 +221,6 @@
 			<section>
 				<div class="mb-4 flex items-center justify-between">
 					<h2 class="text-lg font-semibold text-white">Recent Diagrams</h2>
-					<Button variant="ghost" size="sm">View All</Button>
 				</div>
 
 				{#if loading}
@@ -209,37 +246,25 @@
 								class="relative aspect-video overflow-hidden border-b border-slate-800 bg-slate-900"
 							>
 								<div
-									class={`absolute inset-0 bg-${doc.preview}-500/5 group-hover:bg-${doc.preview}-500/10 transition-colors`}
+									class={`absolute inset-0 bg-${typeColors[doc.diagram_type] || 'slate'}-500/5 group-hover:bg-${typeColors[doc.diagram_type] || 'slate'}-500/10 transition-colors`}
 								></div>
-								<div
-									class="absolute top-3 right-3 opacity-0 transition-opacity group-hover:opacity-100"
-								>
-									<button class="rounded border border-slate-700 bg-slate-800 p-1 hover:text-white">
-										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
-											/>
-										</svg>
-									</button>
-								</div>
 							</div>
 							<div class="p-4">
 								<div class="flex items-start justify-between">
-									<div>
+									<div class="min-w-0 flex-1">
 										<h3
 											class="truncate font-medium text-slate-200 transition-colors group-hover:text-indigo-400"
 										>
 											{doc.title}
 										</h3>
-										<p class="mt-1 text-xs text-slate-500">Edited {doc.updated}</p>
+										<p class="mt-1 text-xs text-slate-500">
+											{doc.workspace_name}{doc.project_name ? ` / ${doc.project_name}` : ''} · {timeAgo(doc.updated_at)}
+										</p>
 									</div>
 									<span
-										class="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-400 uppercase"
+										class="ml-2 shrink-0 rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-400 uppercase"
 									>
-										{doc.type}
+										{doc.diagram_type}
 									</span>
 								</div>
 							</div>
@@ -251,3 +276,75 @@
 		</div>
 	</main>
 </div>
+
+<!-- New Diagram Modal -->
+<Modal bind:open={showNewDiagramModal}>
+	<div class="p-6">
+		<h3 class="mb-4 text-lg font-semibold text-white">Create New Diagram</h3>
+		{#if workspaces.length === 0}
+			<p class="mb-4 text-sm text-slate-400">
+				You need a workspace first.
+				<button class="text-indigo-400 hover:text-indigo-300" onclick={() => { showNewDiagramModal = false; showNewWorkspaceModal = true; }}>
+					Create one
+				</button>
+			</p>
+		{:else}
+			<div class="mb-4 space-y-3">
+				<Input label="Title" placeholder="Untitled" bind:value={newDiagramTitle} />
+				<div>
+					<label for="ws-select" class="mb-1 block text-sm text-slate-400">Workspace</label>
+					<select
+						id="ws-select"
+						bind:value={selectedWorkspaceId}
+						class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 focus:ring-2 focus:ring-indigo-500/50 focus:outline-none"
+					>
+						{#each workspaces as ws}
+							<option value={ws.id}>{ws.name}</option>
+						{/each}
+					</select>
+				</div>
+			</div>
+			<div class="mb-4">
+				<label class="mb-2 block text-sm text-slate-400">Diagram Type</label>
+				<div class="grid grid-cols-3 gap-2">
+					{#each DIAGRAM_TYPES as dt}
+						<button
+							class="flex flex-col items-center rounded-lg border border-slate-700 bg-slate-800 p-3 text-center transition-colors hover:border-indigo-500 hover:bg-slate-700"
+							onclick={() => createDiagram(dt.id)}
+							disabled={creatingDiagram}
+						>
+							<span class="mb-1 text-xl">{dt.icon}</span>
+							<span class="text-xs text-slate-300">{dt.name}</span>
+						</button>
+					{/each}
+				</div>
+			</div>
+		{/if}
+	</div>
+</Modal>
+
+<!-- New Workspace Modal -->
+<Modal bind:open={showNewWorkspaceModal}>
+	<div class="p-6">
+		<h3 class="mb-4 text-lg font-semibold text-white">Create Workspace</h3>
+		<form class="space-y-3" onsubmit={(e) => { e.preventDefault(); createWorkspace(); }}>
+			<Input label="Workspace Name" placeholder="My Workspace" bind:value={newWsName} />
+			<div>
+				<label for="ws-desc" class="mb-1 block text-sm text-slate-400">Description (optional)</label>
+				<textarea
+					id="ws-desc"
+					bind:value={newWsDescription}
+					rows={3}
+					placeholder="What is this workspace for?"
+					class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/50 focus:outline-none"
+				></textarea>
+			</div>
+			<div class="flex justify-end gap-2 pt-2">
+				<Button variant="ghost" size="sm" onclick={() => (showNewWorkspaceModal = false)}>Cancel</Button>
+				<Button variant="primary" size="sm" type="submit" disabled={creatingWs || !newWsName.trim()}>
+					{creatingWs ? 'Creating...' : 'Create'}
+				</Button>
+			</div>
+		</form>
+	</div>
+</Modal>

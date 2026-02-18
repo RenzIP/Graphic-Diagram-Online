@@ -15,6 +15,7 @@
 	import { selectionStore } from '$lib/stores/selection';
 	import { get } from 'svelte/store';
 	import { page } from '$app/stores';
+	import { onDestroy } from 'svelte';
 
 	import { DIAGRAM_TEMPLATES } from '$lib/utils/templates';
 
@@ -26,6 +27,13 @@
 	let isLeftSidebarOpen = $state(true);
 	let isRightSidebarOpen = $state(true);
 	let svgRef = $state<SVGSVGElement | undefined>(undefined);
+
+	// Dirty & autosave state
+	let isDirty = $state(false);
+	let isSaving = $state(false);
+	let lastSavedAt = $state<string | null>(null);
+	let autosaveTimer: ReturnType<typeof setTimeout> | null = null;
+	let isApiDocument = $state(false); // true if loaded from API (has backend record)
 
 	// Load document on mount or id change
 	let isInitialized = false;
@@ -39,11 +47,12 @@
 		}
 
 		if (id) {
-			// Load Strategy: API -> LocalStorage -> Template
+			// Load from API first, fallback to localStorage then template
 			documentStore.load(id).then((found) => {
 				if (found) {
-					console.log('Loaded from API');
+					isApiDocument = true;
 					isInitialized = true;
+					isDirty = false;
 				} else {
 					// Try LocalStorage
 					const localKey = `diagram-${id}`;
@@ -52,8 +61,8 @@
 					if (localData) {
 						try {
 							documentStore.set(JSON.parse(localData));
-							console.log('Loaded from LocalStorage');
 							isInitialized = true;
+							isDirty = false;
 						} catch (e) {
 							console.error('Failed to parse local data', e);
 							loadTemplate(type);
@@ -69,19 +78,24 @@
 	function loadTemplate(type: string) {
 		if (DIAGRAM_TEMPLATES[type]) {
 			documentStore.set(JSON.parse(JSON.stringify(DIAGRAM_TEMPLATES[type])));
-			console.log('Loaded Template:', type);
 		}
 		isInitialized = true;
+		isDirty = false;
 	}
 
-	// Auto-save to LocalStorage
+	// Watch for store changes → mark dirty + schedule autosave
 	$effect(() => {
 		const id = $page.params.id;
 		if (!id || !isInitialized) return;
 
 		const unsubscribe = documentStore.subscribe((state) => {
 			if (isInitialized) {
+				// Always persist to localStorage
 				localStorage.setItem(`diagram-${id}`, JSON.stringify(state));
+
+				// Mark dirty and schedule autosave
+				isDirty = true;
+				scheduleAutosave(id);
 			}
 		});
 
@@ -90,8 +104,49 @@
 		};
 	});
 
+	function scheduleAutosave(docId: string) {
+		if (autosaveTimer) clearTimeout(autosaveTimer);
+		autosaveTimer = setTimeout(() => {
+			performSave(docId);
+		}, 3000); // 3s debounce
+	}
+
+	async function performSave(docId: string) {
+		if (isSaving) return;
+		if (!isApiDocument) {
+			// If not an API document (e.g., new blank from template), skip API save
+			isDirty = false;
+			return;
+		}
+		isSaving = true;
+		try {
+			await documentStore.save(docId, diagramTitle);
+			isDirty = false;
+			lastSavedAt = new Date().toLocaleTimeString();
+		} catch (err) {
+			console.error('[Editor] Autosave failed:', err);
+		} finally {
+			isSaving = false;
+		}
+	}
+
+	// Beforeunload guard — warn if dirty
+	function handleBeforeUnload(e: BeforeUnloadEvent) {
+		if (isDirty) {
+			e.preventDefault();
+		}
+	}
+
+	// Cleanup autosave timer on destroy
+	onDestroy(() => {
+		if (autosaveTimer) clearTimeout(autosaveTimer);
+	});
+
 	function handleTitleChange(newTitle: string) {
 		diagramTitle = newTitle;
+		isDirty = true;
+		const id = $page.params.id;
+		if (id) scheduleAutosave(id);
 	}
 
 	function handleKeyDown(e: KeyboardEvent) {
@@ -117,22 +172,20 @@
 					break;
 				case 's':
 					e.preventDefault();
-					// Save document
-					const id = $page.params.id;
-					if (id) {
-						documentStore
-							.save(id, diagramTitle)
-							.then(() => {
+					{
+						const id = $page.params.id;
+						if (id) {
+							performSave(id).then(() => {
 								if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
 									(window as any).__gradiol_toast('Document saved', 'success');
 								}
-							})
-							.catch((err) => {
+							}).catch((err) => {
 								console.error(err);
 								if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
 									(window as any).__gradiol_toast('Failed to save', 'error');
 								}
 							});
+						}
 					}
 					break;
 			}
@@ -140,7 +193,6 @@
 
 		// Delete handling
 		if (key === 'delete' || key === 'backspace') {
-			// Prevent deleting if editing text
 			if (
 				(e.target as HTMLElement).tagName === 'INPUT' ||
 				(e.target as HTMLElement).tagName === 'TEXTAREA'
@@ -150,11 +202,10 @@
 			const selection = get(selectionStore);
 			if (selection.nodes.length > 0) {
 				selection.nodes.forEach((id) => documentStore.removeNode(id));
-				selectionStore.clear(); // Clear selection after delete
+				selectionStore.clear();
 			}
 			if (selection.edges.length > 0) {
 				selection.edges.forEach((id) => documentStore.removeEdge(id));
-				// If we cleared selection above, this is redundant but safe
 				if (selection.nodes.length === 0) selectionStore.clear();
 			}
 		}
@@ -167,11 +218,11 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeyDown} />
+<svelte:window onkeydown={handleKeyDown} onbeforeunload={handleBeforeUnload} />
 
 <div class="flex h-screen w-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
 	<!-- Top Toolbar -->
-	<Toolbar title={diagramTitle} {diagramType} onTitleChange={handleTitleChange} {svgRef} />
+	<Toolbar title={diagramTitle} {diagramType} onTitleChange={handleTitleChange} {svgRef} {isDirty} {isSaving} {lastSavedAt} />
 
 	<div class="relative flex flex-1 overflow-hidden">
 		<!-- Left Sidebar (Shape Palette) -->

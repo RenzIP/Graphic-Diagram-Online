@@ -21,18 +21,24 @@
 		title = 'Untitled',
 		diagramType = 'flowchart',
 		onTitleChange,
-		svgRef
+		svgRef,
+		isDirty = false,
+		isSaving = false,
+		lastSavedAt = null as string | null
 	}: {
 		title?: string;
 		diagramType?: string;
 		onTitleChange?: (title: string) => void;
 		svgRef?: SVGSVGElement | null;
+		isDirty?: boolean;
+		isSaving?: boolean;
+		lastSavedAt?: string | null;
 	} = $props();
 
 	let editingTitle = $state(false);
 	let titleInput = $state('');
 	let showExportModal = $state(false);
-	let isSaving = $state(false);
+	let isExporting = $state(false);
 
 	// Derived state for enabling tools
 	let selection = $derived($selectionStore);
@@ -50,14 +56,9 @@
 	}
 
 	function handleSave() {
-		isSaving = true;
-		setTimeout(() => {
-			isSaving = false;
-			// Toast notification
-			if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
-				(window as any).__gradiol_toast('Document saved', 'success');
-			}
-		}, 600);
+		// Save is now triggered externally via Ctrl+S or autosave
+		// This dispatches a keyboard event to trigger the same path
+		window.dispatchEvent(new KeyboardEvent('keydown', { key: 's', ctrlKey: true }));
 	}
 
 	function handleAlign(type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') {
@@ -163,6 +164,13 @@
 		<span class="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400 capitalize"
 			>{diagramType}</span
 		>
+		{#if isSaving}
+			<span class="text-xs text-slate-500">Saving...</span>
+		{:else if isDirty}
+			<span class="text-xs text-amber-400" title="Unsaved changes">●</span>
+		{:else if lastSavedAt}
+			<span class="text-xs text-slate-600" title="Saved at {lastSavedAt}">✓</span>
+		{/if}
 	</div>
 
 	<!-- Center: Actions -->

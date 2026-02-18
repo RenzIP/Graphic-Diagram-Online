@@ -2,7 +2,7 @@
 	import { type Snippet } from 'svelte';
 
 	let {
-		open = false,
+		open = $bindable(false),
 		title = '',
 		onclose,
 		children
@@ -15,12 +15,16 @@
 
 	function handleBackdropClick(e: MouseEvent) {
 		if (e.target === e.currentTarget) {
+			open = false;
 			onclose?.();
 		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
-		if (e.key === 'Escape') onclose?.();
+		if (e.key === 'Escape') {
+			open = false;
+			onclose?.();
+		}
 	}
 </script>
 

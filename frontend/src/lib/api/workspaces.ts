@@ -1,25 +1,38 @@
 /**
  * Workspace API endpoints
- * Matches backend: GET/POST /api/workspaces, PUT/DELETE /api/workspaces/:id
+ * Matches: GET/POST /api/workspaces, PUT/DELETE /api/workspaces/:id
+ * See docs/spec/03-api-contract.json
  */
 import { api } from './client';
+import type {
+	Workspace,
+	WorkspaceCreateRequest,
+	WorkspaceUpdateRequest,
+	PaginatedResponse,
+	PaginationParams
+} from './types';
 
-export interface Workspace {
-    id: string;
-    name: string;
-    owner_id: string;
-    created_at: string;
-    member_count?: number;
-}
-
-export interface WorkspaceCreate {
-    name: string;
-}
+export type { Workspace };
 
 export const workspacesApi = {
-    list: () => api.get<Workspace[]>('/workspaces'),
-    create: (data: WorkspaceCreate) => api.post<Workspace>('/workspaces', data),
-    update: (id: string, data: Partial<WorkspaceCreate>) =>
-        api.put<Workspace>(`/workspaces/${id}`, data),
-    delete: (id: string) => api.delete(`/workspaces/${id}`)
+	/** List all workspaces the current user is a member of */
+	list: (params?: PaginationParams) =>
+		api.get<PaginatedResponse<Workspace>>('/workspaces', {
+			params: params
+				? {
+						page: String(params.page ?? 1),
+						per_page: String(params.per_page ?? 20)
+					}
+				: undefined
+		}),
+
+	/** Create a new workspace (current user becomes owner) */
+	create: (data: WorkspaceCreateRequest) => api.post<Workspace>('/workspaces', data),
+
+	/** Update workspace name/description (owner only) */
+	update: (id: string, data: WorkspaceUpdateRequest) =>
+		api.put<Workspace>(`/workspaces/${id}`, data),
+
+	/** Delete workspace and all its projects/documents (owner only) */
+	delete: (id: string) => api.delete(`/workspaces/${id}`)
 };

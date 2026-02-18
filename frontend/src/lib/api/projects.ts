@@ -1,27 +1,37 @@
 /**
  * Project API endpoints
- * Matches backend: GET /api/workspaces/:id/projects, POST/PUT/DELETE /api/projects
+ * Matches: GET /api/workspaces/:id/projects, POST/PUT/DELETE /api/projects
+ * See docs/spec/03-api-contract.json
  */
 import { api } from './client';
+import type {
+	Project,
+	ProjectCreateRequest,
+	ProjectUpdateRequest,
+	PaginatedResponse,
+	PaginationParams
+} from './types';
 
-export interface Project {
-    id: string;
-    workspace_id: string;
-    name: string;
-    created_at: string;
-    document_count?: number;
-}
-
-export interface ProjectCreate {
-    workspace_id: string;
-    name: string;
-}
+export type { Project };
 
 export const projectsApi = {
-    listByWorkspace: (workspaceId: string) =>
-        api.get<Project[]>(`/workspaces/${workspaceId}/projects`),
-    create: (data: ProjectCreate) => api.post<Project>('/projects', data),
-    update: (id: string, data: Partial<ProjectCreate>) =>
-        api.put<Project>(`/projects/${id}`, data),
-    delete: (id: string) => api.delete(`/projects/${id}`)
+	/** List all projects in a workspace */
+	listByWorkspace: (workspaceId: string, params?: PaginationParams) =>
+		api.get<PaginatedResponse<Project>>(`/workspaces/${workspaceId}/projects`, {
+			params: params
+				? {
+						page: String(params.page ?? 1),
+						per_page: String(params.per_page ?? 20)
+					}
+				: undefined
+		}),
+
+	/** Create a new project in a workspace */
+	create: (data: ProjectCreateRequest) => api.post<Project>('/projects', data),
+
+	/** Update project name/description */
+	update: (id: string, data: ProjectUpdateRequest) => api.put<Project>(`/projects/${id}`, data),
+
+	/** Delete project and cascade-delete all documents */
+	delete: (id: string) => api.delete(`/projects/${id}`)
 };
