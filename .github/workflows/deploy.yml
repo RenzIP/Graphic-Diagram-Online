@@ -1,0 +1,116 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false # Never cancel a running deploy
+
+# ─────────────────────────────────────────────────────
+# Required Secrets:
+#   GCP_PROJECT_ID        — Google Cloud project ID
+#   GCP_REGION            — e.g. asia-southeast2
+#   GCP_SA_KEY            — Service Account JSON key (or use WIF below)
+#   VERCEL_TOKEN          — Vercel personal access token
+#   VERCEL_ORG_ID         — Vercel organization/team ID
+#   VERCEL_PROJECT_ID     — Vercel project ID for apps/web
+#
+# Optional (if using Workload Identity Federation instead of SA key):
+#   GCP_WIF_PROVIDER      — projects/*/locations/global/workloadIdentityPools/*/providers/*
+#   GCP_WIF_SERVICE_ACCOUNT — sa-name@project.iam.gserviceaccount.com
+# ─────────────────────────────────────────────────────
+
+jobs:
+  # ─────────────────────────────────────────────
+  # CI gate — must pass before deploy
+  # ─────────────────────────────────────────────
+  ci:
+    name: CI Gate
+    uses: ./.github/workflows/ci.yml
+
+  # ─────────────────────────────────────────────
+  # Backend → Google Cloud Functions Gen 2
+  # ─────────────────────────────────────────────
+  deploy-backend:
+    name: Deploy Backend (GCF Gen 2)
+    needs: ci
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          # --- OR use Workload Identity Federation (recommended) ---
+          # workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          # service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
+
+      - name: Setup Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Deploy to Cloud Functions Gen 2
+        run: |
+          gcloud functions deploy gradiol-api \
+            --gen2 \
+            --runtime=go122 \
+            --region=${{ secrets.GCP_REGION }} \
+            --source=. \
+            --entry-point=Handler \
+            --trigger-http \
+            --allow-unauthenticated \
+            --memory=256Mi \
+            --timeout=60s \
+            --min-instances=0 \
+            --max-instances=10 \
+            --set-env-vars="ENV=production"
+
+  # ─────────────────────────────────────────────
+  # Frontend → Vercel
+  # ─────────────────────────────────────────────
+  deploy-frontend:
+    name: Deploy Frontend (Vercel)
+    needs: ci
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Build for production
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+      - name: Deploy to Vercel
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}

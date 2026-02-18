@@ -1,0 +1,256 @@
+{
+  "entities": {
+    "user_profiles": {
+      "phase": "mvp",
+      "description": "Extended profile for Supabase Auth users. PK references auth.users(id) managed by Supabase. A database trigger should automatically create a profile row when a new user signs up.",
+      "columns": {
+        "id":         { "type": "UUID",         "pk": true, "references": "auth.users(id)", "description": "Supabase Auth user ID" },
+        "full_name":  { "type": "TEXT",         "nullable": true },
+        "avatar_url": { "type": "TEXT",         "nullable": true },
+        "created_at": { "type": "TIMESTAMPTZ",  "default": "now()" }
+      }
+    },
+
+    "workspaces": {
+      "phase": "mvp",
+      "description": "Top-level organizational unit. Each user can own multiple workspaces.",
+      "columns": {
+        "id":          { "type": "UUID",         "pk": true, "default": "gen_random_uuid()" },
+        "name":        { "type": "TEXT",         "not_null": true },
+        "slug":        { "type": "TEXT",         "not_null": true, "unique": true, "description": "URL-friendly identifier, auto-generated from name" },
+        "owner_id":    { "type": "UUID",         "not_null": true, "references": "user_profiles(id)" },
+        "description": { "type": "TEXT",         "nullable": true },
+        "created_at":  { "type": "TIMESTAMPTZ",  "default": "now()" },
+        "updated_at":  { "type": "TIMESTAMPTZ",  "default": "now()" }
+      }
+    },
+
+    "workspace_members": {
+      "phase": "mvp",
+      "description": "Junction table for workspace membership with role-based access. An 'owner' row should be automatically inserted when a workspace is created.",
+      "columns": {
+        "workspace_id": { "type": "UUID",         "not_null": true, "references": "workspaces(id) ON DELETE CASCADE" },
+        "user_id":      { "type": "UUID",         "not_null": true, "references": "user_profiles(id) ON DELETE CASCADE" },
+        "role":         { "type": "TEXT",         "not_null": true, "check": "role IN ('owner', 'editor', 'viewer')" },
+        "joined_at":    { "type": "TIMESTAMPTZ",  "default": "now()" }
+      },
+      "primary_key": ["workspace_id", "user_id"]
+    },
+
+    "projects": {
+      "phase": "mvp",
+      "description": "Folder-level grouping of documents within a workspace.",
+      "columns": {
+        "id":           { "type": "UUID",         "pk": true, "default": "gen_random_uuid()" },
+        "workspace_id": { "type": "UUID",         "not_null": true, "references": "workspaces(id) ON DELETE CASCADE" },
+        "name":         { "type": "TEXT",         "not_null": true },
+        "description":  { "type": "TEXT",         "nullable": true },
+        "created_by":   { "type": "UUID",         "references": "user_profiles(id)", "nullable": true },
+        "created_at":   { "type": "TIMESTAMPTZ",  "default": "now()" },
+        "updated_at":   { "type": "TIMESTAMPTZ",  "default": "now()" }
+      }
+    },
+
+    "documents": {
+      "phase": "mvp",
+      "description": "Core entity — a single diagram. Diagram data will be stored as two JSONB columns: 'content' for the semantic model (nodes/edges) and 'view' for visual layout overrides (positions/styles/routing). This separation is designed to enable DSL roundtrip fidelity.",
+      "columns": {
+        "id":           { "type": "UUID",         "pk": true, "default": "gen_random_uuid()" },
+        "project_id":   { "type": "UUID",         "nullable": true, "references": "projects(id) ON DELETE SET NULL", "description": "Nullable — orphan documents allowed outside projects" },
+        "workspace_id": { "type": "UUID",         "not_null": true, "references": "workspaces(id) ON DELETE CASCADE", "description": "Denormalized for faster queries and RLS; must match project.workspace_id when project_id is set" },
+        "title":        { "type": "TEXT",         "not_null": true, "default": "'Untitled'" },
+        "diagram_type": { "type": "TEXT",         "not_null": true, "check": "diagram_type IN ('flowchart', 'erd', 'usecase')", "description": "MVP types only; extend CHECK when adding new types" },
+        "content": {
+          "type": "JSONB",
+          "not_null": true,
+          "default": "'{\"nodes\":[],\"edges\":[]}'",
+          "description": "Semantic model. Expected schema: { nodes: [{ id, type, label, properties }], edges: [{ id, source, target, label, type }] }"
+        },
+        "view": {
+          "type": "JSONB",
+          "not_null": true,
+          "default": "'{\"positions\":{},\"styles\":{},\"routing\":{}}'",
+          "description": "Visual overrides. Expected schema: { positions: { nodeId: {x,y} }, styles: { nodeId: {fill,fontSize,...} }, routing: { edgeId: {type,points} } }"
+        },
+        "version":    { "type": "INT",           "not_null": true, "default": 1 },
+        "created_by": { "type": "UUID",          "references": "user_profiles(id)", "nullable": true },
+        "created_at": { "type": "TIMESTAMPTZ",   "default": "now()" },
+        "updated_at": { "type": "TIMESTAMPTZ",   "default": "now()" }
+      }
+    },
+
+    "document_versions": {
+      "phase": "later",
+      "description": "Immutable snapshots of document content+view at each save. Will enable version history and visual diff (Phase 3).",
+      "columns": {
+        "id":          { "type": "UUID",         "pk": true, "default": "gen_random_uuid()" },
+        "document_id": { "type": "UUID",         "not_null": true, "references": "documents(id) ON DELETE CASCADE" },
+        "version":     { "type": "INT",          "not_null": true },
+        "content":     { "type": "JSONB",        "not_null": true },
+        "view":        { "type": "JSONB",        "not_null": true },
+        "change_summary": { "type": "TEXT",      "nullable": true, "description": "Optional human-readable summary of changes" },
+        "created_by":  { "type": "UUID",         "references": "user_profiles(id)", "nullable": true },
+        "created_at":  { "type": "TIMESTAMPTZ",  "default": "now()" }
+      }
+    },
+
+    "templates": {
+      "phase": "later",
+      "description": "Reusable diagram templates. Users will be able to save their own or browse public templates (Phase 4 marketplace).",
+      "columns": {
+        "id":            { "type": "UUID",        "pk": true, "default": "gen_random_uuid()" },
+        "title":         { "type": "TEXT",        "not_null": true },
+        "diagram_type":  { "type": "TEXT",        "not_null": true },
+        "content":       { "type": "JSONB",       "not_null": true },
+        "view":          { "type": "JSONB",       "not_null": true },
+        "thumbnail_url": { "type": "TEXT",        "nullable": true },
+        "is_public":     { "type": "BOOLEAN",     "default": false },
+        "created_by":    { "type": "UUID",        "references": "user_profiles(id)", "nullable": true },
+        "created_at":    { "type": "TIMESTAMPTZ", "default": "now()" }
+      }
+    },
+
+    "collab_events": {
+      "phase": "later",
+      "description": "Audit log for realtime collaboration events (Phase 3). Will track who did what and when on a document for debugging and activity feeds.",
+      "columns": {
+        "id":          { "type": "UUID",         "pk": true, "default": "gen_random_uuid()" },
+        "document_id": { "type": "UUID",         "not_null": true, "references": "documents(id) ON DELETE CASCADE" },
+        "user_id":     { "type": "UUID",         "not_null": true, "references": "user_profiles(id)" },
+        "event_type":  { "type": "TEXT",         "not_null": true, "check": "event_type IN ('node_added','node_updated','node_deleted','edge_added','edge_updated','edge_deleted','document_saved','member_joined','member_left')" },
+        "payload":     { "type": "JSONB",        "nullable": true, "description": "Event-specific data (node id, changed fields, etc.)" },
+        "created_at":  { "type": "TIMESTAMPTZ",  "default": "now()" }
+      }
+    }
+  },
+
+  "relations": [
+    { "from": "user_profiles.id",              "to": "auth.users(id)",       "type": "1:1",  "note": "Managed by Supabase Auth; profile will be created via trigger on auth.users insert" },
+    { "from": "workspaces.owner_id",           "to": "user_profiles.id",     "type": "N:1",  "note": "A user can own many workspaces" },
+    { "from": "workspace_members.workspace_id","to": "workspaces.id",        "type": "N:1",  "on_delete": "CASCADE" },
+    { "from": "workspace_members.user_id",     "to": "user_profiles.id",     "type": "N:1",  "on_delete": "CASCADE" },
+    { "from": "projects.workspace_id",         "to": "workspaces.id",        "type": "N:1",  "on_delete": "CASCADE" },
+    { "from": "documents.project_id",          "to": "projects.id",          "type": "N:1",  "on_delete": "SET NULL", "note": "Nullable — orphan docs allowed" },
+    { "from": "documents.workspace_id",        "to": "workspaces.id",        "type": "N:1",  "on_delete": "CASCADE" },
+    { "from": "documents.created_by",          "to": "user_profiles.id",     "type": "N:1" },
+    { "from": "document_versions.document_id", "to": "documents.id",         "type": "N:1",  "on_delete": "CASCADE", "phase": "later" },
+    { "from": "templates.created_by",          "to": "user_profiles.id",     "type": "N:1",  "phase": "later" },
+    { "from": "collab_events.document_id",     "to": "documents.id",         "type": "N:1",  "on_delete": "CASCADE", "phase": "later" },
+    { "from": "collab_events.user_id",         "to": "user_profiles.id",     "type": "N:1",  "phase": "later" }
+  ],
+
+  "keys": {
+    "primary_keys": [
+      { "table": "user_profiles",      "columns": ["id"] },
+      { "table": "workspaces",         "columns": ["id"] },
+      { "table": "workspace_members",  "columns": ["workspace_id", "user_id"], "note": "Composite PK — one membership per user per workspace" },
+      { "table": "projects",           "columns": ["id"] },
+      { "table": "documents",          "columns": ["id"] },
+      { "table": "document_versions",  "columns": ["id"], "phase": "later" },
+      { "table": "templates",          "columns": ["id"], "phase": "later" },
+      { "table": "collab_events",      "columns": ["id"], "phase": "later" }
+    ],
+    "unique_keys": [
+      { "table": "workspaces",         "columns": ["slug"],                    "note": "URL-friendly workspace identifier" },
+      { "table": "document_versions",  "columns": ["document_id", "version"],  "note": "No duplicate version numbers per document", "phase": "later" }
+    ]
+  },
+
+  "indexes": [
+    { "table": "workspaces",         "name": "idx_workspaces_owner",              "columns": ["owner_id"],              "type": "btree",  "rationale": "Dashboard: list workspaces owned by user" },
+    { "table": "workspace_members",  "name": "idx_wm_user",                      "columns": ["user_id"],               "type": "btree",  "rationale": "Lookup all workspaces a user belongs to" },
+    { "table": "workspace_members",  "name": "idx_wm_workspace_role",            "columns": ["workspace_id", "role"],   "type": "btree",  "rationale": "List members of a workspace filtered by role" },
+    { "table": "projects",           "name": "idx_projects_workspace",           "columns": ["workspace_id"],           "type": "btree",  "rationale": "List projects in a workspace" },
+    { "table": "documents",          "name": "idx_documents_project",            "columns": ["project_id"],             "type": "btree",  "rationale": "List documents in a project" },
+    { "table": "documents",          "name": "idx_documents_workspace",          "columns": ["workspace_id"],           "type": "btree",  "rationale": "List all documents in a workspace (cross-project)" },
+    { "table": "documents",          "name": "idx_documents_created_by",         "columns": ["created_by"],             "type": "btree",  "rationale": "List documents created by a specific user" },
+    { "table": "documents",          "name": "idx_documents_updated_at",         "columns": ["updated_at DESC"],        "type": "btree",  "rationale": "Dashboard: recent documents sorted by modification time" },
+    { "table": "documents",          "name": "idx_documents_type",               "columns": ["diagram_type"],           "type": "btree",  "rationale": "Filter documents by diagram type" },
+    { "table": "documents",          "name": "idx_documents_search",             "columns": ["title"],                  "type": "GIN",    "expression": "to_tsvector('indonesian', title)", "rationale": "Full-text search on document titles (Phase 4 feature, but cheap to add from day one)", "phase": "optional" },
+    { "table": "document_versions",  "name": "idx_docver_document",              "columns": ["document_id", "version"], "type": "btree",  "rationale": "List versions of a document in order", "phase": "later" },
+    { "table": "collab_events",      "name": "idx_collab_document_created",      "columns": ["document_id", "created_at DESC"], "type": "btree", "rationale": "Activity feed per document", "phase": "later" },
+    { "table": "collab_events",      "name": "idx_collab_user",                  "columns": ["user_id"],               "type": "btree",  "rationale": "Activity feed per user", "phase": "later" }
+  ],
+
+  "constraints": [
+    { "table": "workspace_members",  "type": "CHECK",   "expression": "role IN ('owner', 'editor', 'viewer')",  "note": "Only three roles allowed" },
+    { "table": "documents",          "type": "CHECK",   "expression": "diagram_type IN ('flowchart', 'erd', 'usecase')", "note": "MVP diagram types — extend when adding new types" },
+    { "table": "documents",          "type": "CHECK",   "expression": "version >= 1",  "note": "Version must be positive" },
+    { "table": "collab_events",      "type": "CHECK",   "expression": "event_type IN ('node_added','node_updated','node_deleted','edge_added','edge_updated','edge_deleted','document_saved','member_joined','member_left')", "phase": "later" }
+  ],
+
+  "rls_policies_outline": {
+    "description": "Row-Level Security policies for Supabase. All tables should have RLS enabled. Policies use auth.uid() to identify the current user.",
+    "policies": [
+      {
+        "table": "user_profiles",
+        "policies": [
+          { "name": "profiles_select_own",    "action": "SELECT", "rule": "id = auth.uid()" },
+          { "name": "profiles_update_own",    "action": "UPDATE", "rule": "id = auth.uid()" },
+          { "name": "profiles_insert_own",    "action": "INSERT", "rule": "id = auth.uid()", "note": "Triggered via auth hook or first-login flow" }
+        ]
+      },
+      {
+        "table": "workspaces",
+        "policies": [
+          { "name": "ws_select_member",   "action": "SELECT", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = id AND wm.user_id = auth.uid())" },
+          { "name": "ws_insert_owner",    "action": "INSERT", "rule": "owner_id = auth.uid()" },
+          { "name": "ws_update_owner",    "action": "UPDATE", "rule": "owner_id = auth.uid()" },
+          { "name": "ws_delete_owner",    "action": "DELETE", "rule": "owner_id = auth.uid()" }
+        ]
+      },
+      {
+        "table": "workspace_members",
+        "policies": [
+          { "name": "wm_select_member",  "action": "SELECT", "rule": "user_id = auth.uid() OR EXISTS (SELECT 1 FROM workspace_members wm2 WHERE wm2.workspace_id = workspace_id AND wm2.user_id = auth.uid())" },
+          { "name": "wm_insert_owner",   "action": "INSERT", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role = 'owner')", "note": "Only workspace owner can invite" },
+          { "name": "wm_delete_owner",   "action": "DELETE", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role = 'owner') OR user_id = auth.uid()", "note": "Owner can remove anyone; member can leave" }
+        ]
+      },
+      {
+        "table": "projects",
+        "policies": [
+          { "name": "proj_select_member",       "action": "SELECT", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid())" },
+          { "name": "proj_insert_editor_plus",   "action": "INSERT", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role IN ('owner', 'editor'))" },
+          { "name": "proj_update_editor_plus",   "action": "UPDATE", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role IN ('owner', 'editor'))" },
+          { "name": "proj_delete_owner",         "action": "DELETE", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role = 'owner')" }
+        ]
+      },
+      {
+        "table": "documents",
+        "policies": [
+          { "name": "doc_select_member",       "action": "SELECT", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid())" },
+          { "name": "doc_insert_editor_plus",  "action": "INSERT", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role IN ('owner', 'editor'))" },
+          { "name": "doc_update_editor_plus",  "action": "UPDATE", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role IN ('owner', 'editor'))" },
+          { "name": "doc_delete_owner",        "action": "DELETE", "rule": "EXISTS (SELECT 1 FROM workspace_members wm WHERE wm.workspace_id = workspace_id AND wm.user_id = auth.uid() AND wm.role = 'owner')" }
+        ]
+      }
+    ]
+  },
+
+  "mvp_tables": [
+    "user_profiles",
+    "workspaces",
+    "workspace_members",
+    "projects",
+    "documents"
+  ],
+
+  "later_tables": [
+    {
+      "table": "document_versions",
+      "target_phase": "Phase 3 — Collaboration",
+      "reason": "Version history and visual diff require stable document model first"
+    },
+    {
+      "table": "templates",
+      "target_phase": "Phase 4 — Polish & Business",
+      "reason": "Template system and marketplace are post-MVP features"
+    },
+    {
+      "table": "collab_events",
+      "target_phase": "Phase 3 — Collaboration",
+      "reason": "Audit log needed only when realtime WebSocket collaboration is live"
+    }
+  ]
+}

@@ -1,0 +1,445 @@
+{
+  "meta": {
+    "project": "GraDiOl",
+    "repo": "RenzIP/Graphic-Diagram-Online",
+    "milestones": [
+      { "name": "MVP-0 Setup", "description": "Project scaffolding, CI/CD, database, auth foundation" },
+      { "name": "MVP-1 Core", "description": "Core CRUD, editor canvas, DSL engine, export" },
+      { "name": "MVP-2 Polish", "description": "UX polish, error handling, autosave, deploy" }
+    ],
+    "labels": [
+      "area:frontend",
+      "area:backend",
+      "area:infra",
+      "area:docs",
+      "type:feature",
+      "type:chore",
+      "type:bug",
+      "prio:P0",
+      "prio:P1",
+      "prio:P2"
+    ]
+  },
+  "issues": [
+    {
+      "title": "[Infra] Initialize monorepo structure (apps/api + apps/web)",
+      "body": "## Summary\nScaffold the monorepo with `apps/api` (Go Fiber) and `apps/web` (SvelteKit) directories.\n\n## Acceptance Criteria\n- [ ] `apps/api/` contains `go.mod`, `cmd/server/main.go`, `internal/` skeleton\n- [ ] `apps/web/` contains SvelteKit project (`npm create svelte@latest`)\n- [ ] Root `README.md` with project overview\n- [ ] Root `.gitignore` covers Go + Node artifacts\n- [ ] Both apps build without errors\n\n## Files/Paths Touched\n- `apps/api/go.mod`, `apps/api/cmd/server/main.go`\n- `apps/web/package.json`, `apps/web/svelte.config.js`\n- `README.md`, `.gitignore`\n\n## Definition of Done\n`go build ./...` succeeds in `apps/api` and `npm run build` succeeds in `apps/web`.",
+      "labels": ["area:infra", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "lead",
+      "priority": "P0",
+      "estimate": "S",
+      "deps": []
+    },
+    {
+      "title": "[Infra] Setup CI workflow (Go test + SvelteKit build)",
+      "body": "## Summary\nCreate `.github/workflows/ci.yml` with parallel jobs for backend (go test) and frontend (npm ci + build).\n\n## Acceptance Criteria\n- [ ] CI triggers on push and PR to `main`/`develop`\n- [ ] Go job: `go vet` + `go test -race -cover` with module caching\n- [ ] Node job: `npm ci` + `npm run lint` + `npm run build` with npm caching\n- [ ] Concurrency control cancels in-progress runs on same ref\n\n## Files/Paths Touched\n- `.github/workflows/ci.yml`\n\n## Definition of Done\nCI passes on a test PR with both apps building successfully.",
+      "labels": ["area:infra", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "lead",
+      "priority": "P0",
+      "estimate": "S",
+      "deps": ["[Infra] Initialize monorepo structure (apps/api + apps/web)"]
+    },
+    {
+      "title": "[Infra] Setup deploy workflow (GCF Gen 2 + Vercel)",
+      "body": "## Summary\nCreate `.github/workflows/deploy.yml` that deploys backend to GCF Gen 2 and frontend to Vercel on push to `main`.\n\n## Acceptance Criteria\n- [ ] Triggers only on push to `main`\n- [ ] CI gate runs before deploy\n- [ ] Backend: `gcloud functions deploy` with Gen 2, go122, HTTP trigger\n- [ ] Frontend: `vercel pull` → `vercel build --prod` → `vercel deploy --prebuilt --prod`\n- [ ] All 6 secrets documented: `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_SA_KEY`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`\n\n## Files/Paths Touched\n- `.github/workflows/deploy.yml`\n\n## Definition of Done\nDeploy workflow runs successfully and produces live URLs for both services.",
+      "labels": ["area:infra", "type:chore", "prio:P1"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "lead",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Infra] Setup CI workflow (Go test + SvelteKit build)"]
+    },
+    {
+      "title": "[Backend] Setup Go Fiber project skeleton with layered architecture",
+      "body": "## Summary\nSetup the Go Fiber app with handler/service/repository layering, config loader, and dependency injection.\n\n## Acceptance Criteria\n- [ ] `cmd/server/main.go` boots Fiber app on configured PORT\n- [ ] `internal/config/config.go` loads env vars with validation\n- [ ] `internal/router/router.go` registers route groups\n- [ ] `internal/handler/health.go` serves `GET /api/health` → `{\"status\":\"ok\"}`\n- [ ] `internal/pkg/response.go` provides JSON response helpers\n- [ ] `internal/handler/errors.go` provides `AppError` struct and `WriteError` helper\n\n## Files/Paths Touched\n- `apps/api/cmd/server/main.go`\n- `apps/api/internal/config/config.go`\n- `apps/api/internal/router/router.go`\n- `apps/api/internal/handler/health.go`, `errors.go`\n- `apps/api/internal/pkg/response.go`\n\n## Definition of Done\n`go run cmd/server/main.go` starts server, `curl /api/health` returns 200.",
+      "labels": ["area:backend", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Infra] Initialize monorepo structure (apps/api + apps/web)"]
+    },
+    {
+      "title": "[Backend] Implement middleware stack (recover, requestID, logger, CORS)",
+      "body": "## Summary\nAdd core middleware: panic recovery, X-Request-ID, structured logging, CORS.\n\n## Acceptance Criteria\n- [ ] `middleware/recover.go`: catches panics → returns 500 JSON with request ID\n- [ ] `middleware/request_id.go`: generates UUID v4, sets header + `ctx.Locals`\n- [ ] `middleware/logger.go`: logs method, path, status, latency, request ID (zerolog/slog)\n- [ ] `middleware/cors.go`: allows `FRONTEND_URL` origin, handles preflight\n- [ ] Middleware applied in correct order in router\n\n## Files/Paths Touched\n- `apps/api/internal/middleware/recover.go`\n- `apps/api/internal/middleware/request_id.go`\n- `apps/api/internal/middleware/logger.go`\n- `apps/api/internal/middleware/cors.go`\n- `apps/api/internal/router/router.go`\n\n## Definition of Done\nRequests show X-Request-ID header, structured logs appear in console, CORS preflight returns correct headers.",
+      "labels": ["area:backend", "type:feature", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Backend] Setup Go Fiber project skeleton with layered architecture"]
+    },
+    {
+      "title": "[Backend] Implement auth middleware (Supabase JWT verification)",
+      "body": "## Summary\nValidate Supabase JWT from Authorization header, extract user ID into context.\n\n## Acceptance Criteria\n- [ ] Parse `Bearer <token>` from Authorization header\n- [ ] Verify JWT signature using `SUPABASE_JWT_SECRET` (HS256)\n- [ ] Check token expiry\n- [ ] Set `ctx.Locals(\"userId\", claims.Sub)` and `ctx.Locals(\"email\", claims.Email)`\n- [ ] Return 401 for missing/invalid/expired tokens\n- [ ] Health endpoint excluded from auth\n\n## Files/Paths Touched\n- `apps/api/internal/middleware/auth.go`\n- `apps/api/internal/router/router.go` (apply to protected group)\n\n## Definition of Done\nProtected endpoints return 401 without token, 200 with valid Supabase JWT.",
+      "labels": ["area:backend", "type:feature", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Backend] Implement middleware stack (recover, requestID, logger, CORS)"]
+    },
+    {
+      "title": "[Backend] Setup Bun ORM + database connection",
+      "body": "## Summary\nConnect to PostgreSQL via Bun ORM, configure connection pooling, register models.\n\n## Acceptance Criteria\n- [ ] `DATABASE_URL` loaded from config\n- [ ] `*bun.DB` initialized with `sql.Open` + `pgdriver`\n- [ ] Connection pool configured (max open/idle connections)\n- [ ] All model structs registered with Bun\n- [ ] Graceful shutdown closes DB connection\n\n## Files/Paths Touched\n- `apps/api/cmd/server/main.go` (DB init)\n- `apps/api/internal/model/user.go`\n- `apps/api/internal/model/workspace.go`\n- `apps/api/internal/model/project.go`\n- `apps/api/internal/model/document.go`\n\n## Definition of Done\nApp starts and can query the database. `SELECT 1` succeeds on startup.",
+      "labels": ["area:backend", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Backend] Setup Go Fiber project skeleton with layered architecture", "[Infra] Create database migrations (5 tables)"]
+    },
+    {
+      "title": "[Infra] Create database migrations (5 tables)",
+      "body": "## Summary\nWrite SQL migration files for all 5 MVP tables using Bun migrate.\n\n## Acceptance Criteria\n- [ ] `001_create_user_profiles.up.sql` / `.down.sql` — with Supabase trigger\n- [ ] `002_create_workspaces.up.sql` / `.down.sql` — unique slug, owner FK\n- [ ] `003_create_workspace_members.up.sql` / `.down.sql` — composite PK, role CHECK\n- [ ] `004_create_projects.up.sql` / `.down.sql` — workspace FK\n- [ ] `005_create_documents.up.sql` / `.down.sql` — JSONB content/view, diagram_type CHECK, 5 indexes\n- [ ] `seed.sql` — 1 user → 1 workspace → 1 project → 1 document\n- [ ] `cmd/migrate/main.go` for running migrations\n\n## Files/Paths Touched\n- `apps/api/migrations/001_*.sql` through `005_*.sql`\n- `apps/api/migrations/seed.sql`\n- `apps/api/cmd/migrate/main.go`\n\n## Definition of Done\n`go run cmd/migrate/main.go up` creates all tables. `go run cmd/migrate/main.go down` drops them cleanly. Seed data inserts without errors.",
+      "labels": ["area:backend", "area:infra", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": []
+    },
+    {
+      "title": "[Backend] Implement auth handlers (callback + me)",
+      "body": "## Summary\nPOST `/api/auth/callback` (upsert user profile) and GET `/api/auth/me` (return current user).\n\n## Acceptance Criteria\n- [ ] `POST /api/auth/callback` creates/updates user_profiles row from JWT claims\n- [ ] `GET /api/auth/me` returns `{ id, full_name, avatar_url, email, created_at }`\n- [ ] DTOs: `AuthCallbackReq`, `AuthMeResp`\n- [ ] Service: `AuthService.ExchangeToken`, `AuthService.GetProfile`\n- [ ] Repository: `UserRepo.Upsert`, `UserRepo.FindByID`\n\n## Files/Paths Touched\n- `apps/api/internal/handler/auth.go`\n- `apps/api/internal/service/auth_service.go`\n- `apps/api/internal/repository/user_repo.go`\n- `apps/api/internal/dto/auth.go`\n\n## Definition of Done\nAuth callback upserts user, `/api/auth/me` returns profile for valid JWT.",
+      "labels": ["area:backend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Backend] Implement auth middleware (Supabase JWT verification)", "[Backend] Setup Bun ORM + database connection"]
+    },
+    {
+      "title": "[Backend] Implement workspace CRUD (list, create, update, delete)",
+      "body": "## Summary\nFull CRUD for workspaces with auto-slug generation and owner membership creation.\n\n## Acceptance Criteria\n- [ ] `GET /api/workspaces` — list workspaces where user is member, paginated\n- [ ] `POST /api/workspaces` — create workspace + auto-insert owner membership (transaction)\n- [ ] `PUT /api/workspaces/:id` — update name/description (owner only)\n- [ ] `DELETE /api/workspaces/:id` — delete workspace (owner only, CASCADE)\n- [ ] Auto-generate slug from name\n- [ ] DTOs: `CreateWorkspaceReq`, `WorkspaceResp`, `WorkspaceListResp`\n- [ ] Pagination via `?page=1&per_page=20`\n\n## Files/Paths Touched\n- `apps/api/internal/handler/workspace.go`\n- `apps/api/internal/service/workspace_service.go`\n- `apps/api/internal/repository/workspace_repo.go`\n- `apps/api/internal/dto/workspace.go`\n- `apps/api/internal/pkg/slug.go`\n\n## Definition of Done\nAll 4 workspace endpoints return correct responses. Creating a workspace auto-inserts owner membership.",
+      "labels": ["area:backend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Backend] Implement auth handlers (callback + me)"]
+    },
+    {
+      "title": "[Backend] Implement project CRUD (list, create, update, delete)",
+      "body": "## Summary\nCRUD for projects within a workspace, with permission checks.\n\n## Acceptance Criteria\n- [ ] `GET /api/workspaces/:id/projects` — list projects in workspace, paginated\n- [ ] `POST /api/projects` — create project (owner/editor only)\n- [ ] `PUT /api/projects/:id` — update project (owner/editor only)\n- [ ] `DELETE /api/projects/:id` — delete project (owner/editor only)\n- [ ] Check workspace membership before all operations\n- [ ] DTOs: `CreateProjectReq`, `ProjectResp`, `ProjectListResp`\n\n## Files/Paths Touched\n- `apps/api/internal/handler/project.go`\n- `apps/api/internal/service/project_service.go`\n- `apps/api/internal/repository/project_repo.go`\n- `apps/api/internal/dto/project.go`\n\n## Definition of Done\nAll 4 project endpoints work. Non-members get 403.",
+      "labels": ["area:backend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Backend] Implement workspace CRUD (list, create, update, delete)"]
+    },
+    {
+      "title": "[Backend] Implement document CRUD (list, get, create, update, delete)",
+      "body": "## Summary\nCRUD for documents with JSONB content/view pass-through, version increment on update.\n\n## Acceptance Criteria\n- [ ] `GET /api/projects/:id/documents` — list documents in project, paginated\n- [ ] `GET /api/documents/:id` — get single document with full content/view\n- [ ] `POST /api/documents` — create document (content/view as raw JSON)\n- [ ] `PUT /api/documents/:id` — update document, increment version if content changed\n- [ ] `DELETE /api/documents/:id` — delete document (owner only)\n- [ ] `GET /api/documents/recent` — recent documents across all workspaces\n- [ ] JSONB content/view stored as `json.RawMessage` (pass-through)\n- [ ] `diagram_type` validation: flowchart, erd, usecase\n\n## Files/Paths Touched\n- `apps/api/internal/handler/document.go`\n- `apps/api/internal/service/document_service.go`\n- `apps/api/internal/repository/document_repo.go`\n- `apps/api/internal/dto/document.go`\n\n## Definition of Done\nAll 6 document endpoints work. Version auto-increments. Content/view pass through without deserialization.",
+      "labels": ["area:backend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Backend] Implement project CRUD (list, create, update, delete)"]
+    },
+    {
+      "title": "[Backend] Implement document export endpoint (PNG/SVG)",
+      "body": "## Summary\nPOST `/api/documents/:id/export` that returns diagram as PNG or SVG.\n\n## Acceptance Criteria\n- [ ] Accept `format` (png/svg), `scale`, `background`, `padding` in request body\n- [ ] Return binary response with correct Content-Type\n- [ ] Rate limited to 10/min per user\n- [ ] Service: `ExportService.Export`\n\n## Files/Paths Touched\n- `apps/api/internal/handler/document.go` (export handler)\n- `apps/api/internal/service/export_service.go`\n- `apps/api/internal/dto/export.go`\n\n## Definition of Done\nExport endpoint returns PNG/SVG binary for a valid document. Rate limit enforced.",
+      "labels": ["area:backend", "type:feature", "prio:P1"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P1",
+      "estimate": "L",
+      "deps": ["[Backend] Implement document CRUD (list, get, create, update, delete)"]
+    },
+    {
+      "title": "[Backend] Implement rate limiting middleware (Redis-backed)",
+      "body": "## Summary\nToken bucket rate limiter per user/IP using Redis.\n\n## Acceptance Criteria\n- [ ] Global: 100 req/min per user\n- [ ] Write (POST/PUT/DELETE): 30 req/min\n- [ ] Export: 10 req/min\n- [ ] Returns 429 with `RATE_LIMITED` error code\n- [ ] Falls back to in-memory if Redis unavailable\n\n## Files/Paths Touched\n- `apps/api/internal/middleware/rate_limit.go`\n- `apps/api/internal/router/router.go`\n\n## Definition of Done\nRapid requests get 429 after exceeding limit. Rate limit resets after window.",
+      "labels": ["area:backend", "type:feature", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "backend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Backend] Implement middleware stack (recover, requestID, logger, CORS)"]
+    },
+    {
+      "title": "[Backend] Add request validation with go-playground/validator",
+      "body": "## Summary\nStructured validation for all DTOs using go-playground/validator tags.\n\n## Acceptance Criteria\n- [ ] All `*Req` DTOs have `validate` struct tags\n- [ ] `pkg/validator.go` wraps validator and formats field errors into API error `details`\n- [ ] Invalid requests return 422 with field-level error details\n- [ ] Validation covers: required, min/max length, enum values, UUID format\n\n## Files/Paths Touched\n- `apps/api/internal/pkg/validator.go`\n- `apps/api/internal/dto/*.go` (add validate tags)\n\n## Definition of Done\nSending invalid payloads returns 422 with descriptive field errors.",
+      "labels": ["area:backend", "type:feature", "prio:P1"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P1",
+      "estimate": "S",
+      "deps": ["[Backend] Setup Go Fiber project skeleton with layered architecture"]
+    },
+    {
+      "title": "[Backend] Write Cloud Functions entrypoint (function.go)",
+      "body": "## Summary\nCreate `function.go` that exports an HTTP handler compatible with GCF Gen 2.\n\n## Acceptance Criteria\n- [ ] `function.go` at `apps/api/` root exports `Handler(w, r)`\n- [ ] Uses `fiber/adapters/cloud` to bridge Fiber → `net/http`\n- [ ] Same app setup as `cmd/server/main.go`\n- [ ] `.gcloudignore` excludes test files, cmd/, dev configs\n\n## Files/Paths Touched\n- `apps/api/function.go`\n- `apps/api/.gcloudignore`\n\n## Definition of Done\n`gcloud functions deploy` succeeds and the function responds to HTTP requests.",
+      "labels": ["area:backend", "area:infra", "type:chore", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "backend",
+      "priority": "P1",
+      "estimate": "S",
+      "deps": ["[Backend] Implement document CRUD (list, get, create, update, delete)"]
+    },
+    {
+      "title": "[Frontend] Setup SvelteKit project with Tailwind + design system",
+      "body": "## Summary\nInitialize SvelteKit with Tailwind CSS, configure adapter-vercel, setup base design tokens.\n\n## Acceptance Criteria\n- [ ] SvelteKit project in `apps/web/` with TypeScript\n- [ ] Tailwind CSS configured with custom color palette (dark mode ready)\n- [ ] `svelte.config.js` uses `adapter-vercel` with `nodejs20.x` runtime\n- [ ] Google Font loaded (Inter or similar)\n- [ ] Base layout with root `+layout.svelte`\n- [ ] Shared UI primitives: `Button.svelte`, `Input.svelte`, `Modal.svelte`, `Toast.svelte`\n\n## Files/Paths Touched\n- `apps/web/svelte.config.js`\n- `apps/web/tailwind.config.js`\n- `apps/web/src/app.css`\n- `apps/web/src/routes/+layout.svelte`\n- `apps/web/src/lib/components/ui/*.svelte`\n\n## Definition of Done\n`npm run dev` shows styled landing page. UI primitives render correctly.",
+      "labels": ["area:frontend", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Infra] Initialize monorepo structure (apps/api + apps/web)"]
+    },
+    {
+      "title": "[Frontend] Implement Supabase Auth (login, register, callback)",
+      "body": "## Summary\nIntegrate Supabase Auth with Google OAuth + Magic Link flows.\n\n## Acceptance Criteria\n- [ ] `hooks.server.ts` validates session cookie and populates `locals.user`\n- [ ] Login page with Google OAuth button + email magic link form\n- [ ] Register page (if separate from login)\n- [ ] Auth callback route handles OAuth redirect\n- [ ] Protected routes redirect to `/login` if unauthenticated\n- [ ] Session refresh via Supabase SDK\n\n## Files/Paths Touched\n- `apps/web/src/hooks.server.ts`\n- `apps/web/src/routes/(auth)/login/+page.svelte`\n- `apps/web/src/routes/(auth)/register/+page.svelte`\n- `apps/web/src/routes/(auth)/+layout.svelte`\n- `apps/web/src/lib/api/auth.ts`\n\n## Definition of Done\nUser can log in via Google OAuth, session persists across page reloads, protected routes redirect correctly.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Setup SvelteKit project with Tailwind + design system"]
+    },
+    {
+      "title": "[Frontend] Create API client layer (fetch wrapper + resource clients)",
+      "body": "## Summary\nBuild thin API client modules that wrap fetch with auth headers and error mapping.\n\n## Acceptance Criteria\n- [ ] `lib/api/client.ts` — base fetch helper: auth header injection, error → AppError mapping, base URL config\n- [ ] `lib/api/workspaces.ts` — CRUD methods for workspaces\n- [ ] `lib/api/projects.ts` — CRUD methods for projects\n- [ ] `lib/api/documents.ts` — CRUD methods for documents + recent + export\n- [ ] All methods return typed responses matching API contract DTOs\n\n## Files/Paths Touched\n- `apps/web/src/lib/api/client.ts`\n- `apps/web/src/lib/api/workspaces.ts`\n- `apps/web/src/lib/api/projects.ts`\n- `apps/web/src/lib/api/documents.ts`\n\n## Definition of Done\nAPI calls succeed against running backend. Errors are properly typed and handled.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Frontend] Implement Supabase Auth (login, register, callback)"]
+    },
+    {
+      "title": "[Frontend] Implement Svelte stores (document, canvas, selection, history)",
+      "body": "## Summary\nCreate the 4 core Svelte writable stores that manage editor state.\n\n## Acceptance Criteria\n- [ ] `documentStore` — `{ nodes: Node[], edges: Edge[] }` + CRUD actions\n- [ ] `canvasStore` — `{ x, y, k, connecting? }` + pan/zoom/connection actions\n- [ ] `selectionStore` — `{ nodes: string[], edges: string[] }` + select/clear actions\n- [ ] `historyStore` — `{ past[], future[] }` + push/undo/redo/clear actions\n- [ ] Every document mutation calls `historyStore.push()` before mutating\n- [ ] History capped at configurable MAX_HISTORY_SIZE\n\n## Files/Paths Touched\n- `apps/web/src/lib/stores/document.ts`\n- `apps/web/src/lib/stores/canvas.ts`\n- `apps/web/src/lib/stores/selection.ts`\n- `apps/web/src/lib/stores/history.ts`\n\n## Definition of Done\nStores are importable, actions modify state correctly, undo/redo restores previous states.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Frontend] Setup SvelteKit project with Tailwind + design system"]
+    },
+    {
+      "title": "[Frontend] Build SVG canvas with pan/zoom (Canvas.svelte)",
+      "body": "## Summary\nCore SVG canvas component with pan (drag), zoom (scroll), grid background, and event delegation.\n\n## Acceptance Criteria\n- [ ] `Canvas.svelte` renders root SVG with transform group\n- [ ] Pan via mouse drag (middle button or space+drag)\n- [ ] Zoom via scroll wheel (centered on cursor)\n- [ ] `Grid.svelte` renders dot/line grid that scales with zoom\n- [ ] Canvas subscribes to `documentStore` and renders nodes/edges\n- [ ] Canvas writes pan/zoom to `canvasStore`\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/canvas/Canvas.svelte`\n- `apps/web/src/lib/components/canvas/Grid.svelte`\n- `apps/web/src/lib/utils/geometry.ts`\n\n## Definition of Done\nCanvas renders with grid, pan/zoom works smoothly, nodes from store are visible.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Implement Svelte stores (document, canvas, selection, history)"]
+    },
+    {
+      "title": "[Frontend] Implement node rendering + drag (NodeWrapper, NodeRenderer)",
+      "body": "## Summary\nBuild the node wrapper (drag/resize/select) and dynamic renderer that dispatches to shape components.\n\n## Acceptance Criteria\n- [ ] `NodeWrapper.svelte` — handles drag-to-move, click-to-select, resize handles\n- [ ] `NodeRenderer.svelte` — maps `node.type` → specific shape component\n- [ ] At least 3 node shapes: `ProcessNode`, `DecisionNode`, `StartEndNode`\n- [ ] Dragging updates `documentStore.updateNode(id, { position })`\n- [ ] Clicking updates `selectionStore.selectNode(id)`\n- [ ] Selected nodes show visual highlight (blue border / handles)\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/nodes/NodeWrapper.svelte`\n- `apps/web/src/lib/components/nodes/NodeRenderer.svelte`\n- `apps/web/src/lib/components/nodes/ProcessNode.svelte`\n- `apps/web/src/lib/components/nodes/DecisionNode.svelte`\n- `apps/web/src/lib/components/nodes/StartEndNode.svelte`\n\n## Definition of Done\nNodes render with correct shapes. Drag moves them. Click selects them.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Build SVG canvas with pan/zoom (Canvas.svelte)"]
+    },
+    {
+      "title": "[Frontend] Implement edge rendering + connection drawing",
+      "body": "## Summary\nRender edges between nodes with support for creating new connections by dragging from ports.\n\n## Acceptance Criteria\n- [ ] `EdgeRenderer.svelte` — dispatches to edge type components\n- [ ] `BaseEdge.svelte` — SVG path with optional label\n- [ ] `ArrowEdge.svelte` — directed arrow marker\n- [ ] Port handles on nodes (top/right/bottom/left)\n- [ ] Drag from port → `canvasStore.startConnection` → mousemove → drop on target port → `documentStore.addEdge`\n- [ ] Visual feedback during connection drawing (dashed line to cursor)\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/edges/EdgeRenderer.svelte`\n- `apps/web/src/lib/components/edges/BaseEdge.svelte`\n- `apps/web/src/lib/components/edges/ArrowEdge.svelte`\n\n## Definition of Done\nEdges render between connected nodes. User can create new edges by dragging port to port.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Implement node rendering + drag (NodeWrapper, NodeRenderer)"]
+    },
+    {
+      "title": "[Frontend] Build editor layout (Toolbar + Sidebar + PropertyPanel)",
+      "body": "## Summary\nAssemble the editor UI: top toolbar, left sidebar (shape palette), right property panel.\n\n## Acceptance Criteria\n- [ ] `Toolbar.svelte` — undo, redo, zoom in/out, fit, grid toggle, export, save buttons\n- [ ] `Sidebar.svelte` — shape palette that changes based on `diagram_type`\n- [ ] `PropertyPanel.svelte` — edit properties of selected node/edge (label, fill, stroke, font)\n- [ ] Sidebar drag-to-canvas: drop shape → `documentStore.addNode()`\n- [ ] PropertyPanel reads from `selectionStore`, writes to `documentStore`\n- [ ] Responsive layout: sidebar/panel collapsible\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/editor/Toolbar.svelte`\n- `apps/web/src/lib/components/editor/Sidebar.svelte`\n- `apps/web/src/lib/components/editor/PropertyPanel.svelte`\n- `apps/web/src/routes/(app)/editor/[id]/+page.svelte`\n\n## Definition of Done\nEditor page shows all 3 panels. Sidebar shows correct shapes for diagram type. Property panel edits selected node.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Implement edge rendering + connection drawing"]
+    },
+    {
+      "title": "[Frontend] Implement DSL engine (parser + transformer + serializer)",
+      "body": "## Summary\nBuild the DSL processing pipeline: text → AST → DocumentState, and DocumentState → text.\n\n## Acceptance Criteria\n- [ ] `parser.ts` — tokenize DSL text into AST\n- [ ] `transformer.ts` — convert AST → `{ nodes: Node[], edges: Edge[] }`\n- [ ] `serializer.ts` — convert `{ nodes, edges }` → DSL text\n- [ ] Roundtrip fidelity: parse → transform → serialize → parse should produce same AST\n- [ ] Handle at least flowchart diagram type syntax\n- [ ] Error recovery: parser returns partial AST + error markers on invalid input\n\n## Files/Paths Touched\n- `apps/web/src/lib/dsl/parser.ts`\n- `apps/web/src/lib/dsl/transformer.ts`\n- `apps/web/src/lib/dsl/serializer.ts`\n\n## Definition of Done\nParsing valid DSL produces correct nodes/edges. Serializing produces valid DSL. Roundtrip is stable.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Implement Svelte stores (document, canvas, selection, history)"]
+    },
+    {
+      "title": "[Frontend] Build DSL editor panel with bidirectional sync",
+      "body": "## Summary\nCollapsible DSL text editor that syncs bidirectionally with the visual canvas.\n\n## Acceptance Criteria\n- [ ] `DslEditor.svelte` — text editor panel (bottom, collapsible)\n- [ ] Typing DSL → `parser.parse()` → `transformer.transform()` → `documentStore.set()`\n- [ ] Canvas changes → `serializer.serialize()` → update DSL text\n- [ ] `syncDirection` flag prevents infinite loops\n- [ ] Debounce DSL parsing (300ms after last keystroke)\n- [ ] Syntax highlighting (basic, keyword-based)\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/editor/DslEditor.svelte`\n\n## Definition of Done\nTyping DSL updates canvas. Dragging nodes updates DSL text. No infinite loop.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "L",
+      "deps": ["[Frontend] Implement DSL engine (parser + transformer + serializer)", "[Frontend] Build editor layout (Toolbar + Sidebar + PropertyPanel)"]
+    },
+    {
+      "title": "[Frontend] Implement dashboard page (workspace list + recent docs)",
+      "body": "## Summary\nDashboard home page showing user's workspaces and recently edited documents.\n\n## Acceptance Criteria\n- [ ] List user's workspaces as cards with name, description, member count\n- [ ] \"Recent Documents\" section showing last 10 edited documents\n- [ ] Create workspace button → modal → POST workspace\n- [ ] Click workspace → navigate to `/workspace/[id]`\n- [ ] Click document → navigate to `/editor/[id]`\n- [ ] Empty states for no workspaces / no recent docs\n\n## Files/Paths Touched\n- `apps/web/src/routes/(app)/dashboard/+page.svelte`\n- `apps/web/src/routes/(app)/dashboard/+page.ts` (load function)\n\n## Definition of Done\nDashboard loads workspaces and recent docs from API. Create workspace works.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Frontend] Create API client layer (fetch wrapper + resource clients)"]
+    },
+    {
+      "title": "[Frontend] Implement workspace page (project list + document list)",
+      "body": "## Summary\nWorkspace detail page showing projects and their documents.\n\n## Acceptance Criteria\n- [ ] List projects in workspace as cards\n- [ ] Each project card expands to show documents\n- [ ] Create project button → modal\n- [ ] Create document button → modal (select diagram type: flowchart/erd/usecase)\n- [ ] Click document → navigate to `/editor/[id]`\n- [ ] Delete project/document with confirmation\n\n## Files/Paths Touched\n- `apps/web/src/routes/(app)/workspace/[id]/+page.svelte`\n- `apps/web/src/routes/(app)/workspace/[id]/+page.ts`\n\n## Definition of Done\nWorkspace page shows projects and documents. CRUD operations work.",
+      "labels": ["area:frontend", "type:feature", "prio:P0"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": ["[Frontend] Implement dashboard page (workspace list + recent docs)"]
+    },
+    {
+      "title": "[Frontend] Implement PNG/SVG export from canvas",
+      "body": "## Summary\nExport the current diagram as PNG or SVG file download.\n\n## Acceptance Criteria\n- [ ] Toolbar export button → dropdown (PNG / SVG)\n- [ ] PNG export: clone SVG → apply inline styles → Canvas API `toBlob()` → download\n- [ ] SVG export: serialize SVG DOM → download as `.svg` file\n- [ ] Export captures full diagram (not just viewport)\n- [ ] `utils/export.ts` utility functions\n\n## Files/Paths Touched\n- `apps/web/src/lib/utils/export.ts`\n- `apps/web/src/lib/components/editor/Toolbar.svelte` (export button)\n\n## Definition of Done\nExported PNG/SVG contains full diagram with correct styles. Download triggers correctly.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Frontend] Build editor layout (Toolbar + Sidebar + PropertyPanel)"]
+    },
+    {
+      "title": "[Frontend] Implement autosave with dirty indicator",
+      "body": "## Summary\nDebounced autosave (3s) with dirty indicator in toolbar and beforeunload guard.\n\n## Acceptance Criteria\n- [ ] `documentStore.subscribe()` triggers debounced save (3000ms)\n- [ ] Dirty indicator (● dot) shown in toolbar when unsaved\n- [ ] `beforeunload` warns if dirty\n- [ ] Ctrl+S triggers immediate save, clears timer\n- [ ] Toast notification on save success/failure\n- [ ] Failed saves retry on next autosave cycle\n\n## Files/Paths Touched\n- `apps/web/src/routes/(app)/editor/[id]/+page.svelte` (autosave logic)\n- `apps/web/src/lib/components/editor/Toolbar.svelte` (dirty indicator)\n\n## Definition of Done\nEdits auto-save after 3s pause. Dirty dot appears/disappears correctly. Ctrl+S saves immediately.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Frontend] Build DSL editor panel with bidirectional sync"]
+    },
+    {
+      "title": "[Frontend] Add ERD-specific nodes and edges",
+      "body": "## Summary\nNode shapes and edge types specific to Entity-Relationship Diagrams.\n\n## Acceptance Criteria\n- [ ] `EntityNode.svelte` — rectangle with attribute list\n- [ ] `AttributeNode.svelte` — ellipse attribute\n- [ ] `RelationshipNode.svelte` — diamond shape\n- [ ] `RelationEdge.svelte` — with cardinality labels (1:N, N:M, etc.)\n- [ ] Sidebar shows ERD palette when `diagram_type === 'erd'`\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/nodes/EntityNode.svelte`\n- `apps/web/src/lib/components/nodes/AttributeNode.svelte`\n- `apps/web/src/lib/components/nodes/RelationshipNode.svelte`\n- `apps/web/src/lib/components/edges/RelationEdge.svelte`\n- `apps/web/src/lib/utils/shapes.ts` (ERD shape config)\n\n## Definition of Done\nERD diagram type renders entity, attribute, and relationship shapes. Relation edges show cardinality.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Frontend] Implement node rendering + drag (NodeWrapper, NodeRenderer)"]
+    },
+    {
+      "title": "[Frontend] Add Use Case diagram specific nodes",
+      "body": "## Summary\nNode shapes specific to Use Case Diagrams.\n\n## Acceptance Criteria\n- [ ] `ActorNode.svelte` — stick figure\n- [ ] `UseCaseNode.svelte` — ellipse with label\n- [ ] Sidebar shows Use Case palette when `diagram_type === 'usecase'`\n- [ ] System boundary rectangle (optional grouping)\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/nodes/ActorNode.svelte`\n- `apps/web/src/lib/components/nodes/UseCaseNode.svelte`\n- `apps/web/src/lib/utils/shapes.ts` (usecase shape config)\n\n## Definition of Done\nUse Case diagram type renders actors and use cases correctly.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Frontend] Implement node rendering + drag (NodeWrapper, NodeRenderer)"]
+    },
+    {
+      "title": "[Frontend] Implement selection box (marquee) + multi-select",
+      "body": "## Summary\nDrag-to-select rectangle and shift+click multi-select.\n\n## Acceptance Criteria\n- [ ] `SelectionBox.svelte` — renders blue rectangle during drag\n- [ ] Nodes within box are added to `selectionStore`\n- [ ] Shift+Click adds to existing selection\n- [ ] Click empty canvas clears selection\n- [ ] Multi-select enables batch operations (delete, move)\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/canvas/SelectionBox.svelte`\n- `apps/web/src/lib/components/canvas/Canvas.svelte` (event handling)\n\n## Definition of Done\nMarquee select works. Multi-selected nodes move together. Shift+Click toggles selection.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Frontend] Implement node rendering + drag (NodeWrapper, NodeRenderer)"]
+    },
+    {
+      "title": "[Frontend] Implement minimap component",
+      "body": "## Summary\nScaled-down overview of the canvas, clickable to pan viewport.\n\n## Acceptance Criteria\n- [ ] `Minimap.svelte` renders in bottom-right corner\n- [ ] Shows all nodes as small rectangles + viewport indicator\n- [ ] Click on minimap pans canvas to that area\n- [ ] Toggle via toolbar button\n- [ ] Scales content to fit minimap bounds\n\n## Files/Paths Touched\n- `apps/web/src/lib/components/canvas/Minimap.svelte`\n- `apps/web/src/lib/components/editor/Toolbar.svelte` (toggle button)\n\n## Definition of Done\nMinimap shows accurate overview. Clicking pans the main canvas.",
+      "labels": ["area:frontend", "type:feature", "prio:P2"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "frontend",
+      "priority": "P2",
+      "estimate": "M",
+      "deps": ["[Frontend] Build SVG canvas with pan/zoom (Canvas.svelte)"]
+    },
+    {
+      "title": "[Frontend] Implement auto-layout with Dagre",
+      "body": "## Summary\nAuto-arrange nodes using Dagre graph layout algorithm.\n\n## Acceptance Criteria\n- [ ] `utils/layout.ts` wraps Dagre with GraDiOl node/edge format\n- [ ] Toolbar \"Auto Layout\" button triggers layout\n- [ ] Layout respects diagram direction (top-bottom for flowchart, left-right for ERD)\n- [ ] Animates nodes to new positions (CSS transition or requestAnimationFrame)\n- [ ] Pushes layout change to history stack (undoable)\n\n## Files/Paths Touched\n- `apps/web/src/lib/utils/layout.ts`\n- `apps/web/src/lib/components/editor/Toolbar.svelte`\n\n## Definition of Done\nAuto-layout arranges nodes without overlap. Undo reverts to previous positions.",
+      "labels": ["area:frontend", "type:feature", "prio:P2"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "frontend",
+      "priority": "P2",
+      "estimate": "M",
+      "deps": ["[Frontend] Implement edge rendering + connection drawing"]
+    },
+    {
+      "title": "[Frontend] Build landing page",
+      "body": "## Summary\nPublic landing page with hero, features, and CTA.\n\n## Acceptance Criteria\n- [ ] Hero section with project tagline and CTA button\n- [ ] Feature highlights (DSL + Visual, 3 diagram types, Export)\n- [ ] Responsive design (mobile-friendly)\n- [ ] Login/Register buttons in header\n- [ ] Professional aesthetic (gradients, animations, dark mode ready)\n\n## Files/Paths Touched\n- `apps/web/src/routes/+page.svelte`\n\n## Definition of Done\nLanding page looks professional and converts visitors to sign-up.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "M",
+      "deps": ["[Frontend] Setup SvelteKit project with Tailwind + design system"]
+    },
+    {
+      "title": "[Infra] Setup GCP project, service account, and Supabase",
+      "body": "## Summary\nProvision GCP project, create SA with minimal permissions, setup Supabase project.\n\n## Acceptance Criteria\n- [ ] GCP project created with Cloud Functions + Cloud Build APIs enabled\n- [ ] Service account with `cloudfunctions.developer` + `iam.serviceAccountUser` roles\n- [ ] SA key generated (or WIF pool configured)\n- [ ] Supabase project created with Auth enabled (Google OAuth + Magic Link)\n- [ ] Database connection string available\n- [ ] All secrets added to GitHub repo\n\n## Files/Paths Touched\n- GCP Console / gcloud CLI\n- Supabase Dashboard\n- GitHub repo Settings → Secrets\n\n## Definition of Done\nAll cloud services provisioned. Secrets in GitHub. Deploy workflow can authenticate.",
+      "labels": ["area:infra", "type:chore", "prio:P0"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "lead",
+      "priority": "P0",
+      "estimate": "M",
+      "deps": []
+    },
+    {
+      "title": "[Infra] Setup Vercel project for frontend",
+      "body": "## Summary\nLink apps/web to Vercel with correct build settings and environment variables.\n\n## Acceptance Criteria\n- [ ] Vercel project linked to `apps/web` directory\n- [ ] Framework preset: SvelteKit\n- [ ] Node.js version: 20.x\n- [ ] Environment variables set: `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `PUBLIC_API_URL`\n- [ ] Preview deploys work on PRs\n- [ ] `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` added to GitHub secrets\n\n## Files/Paths Touched\n- Vercel Dashboard\n- GitHub repo Settings → Secrets\n\n## Definition of Done\n`vercel deploy` from CLI succeeds. Preview URL accessible.",
+      "labels": ["area:infra", "type:chore", "prio:P1"],
+      "milestone": "MVP-0 Setup",
+      "assignee_hint": "lead",
+      "priority": "P1",
+      "estimate": "S",
+      "deps": ["[Frontend] Setup SvelteKit project with Tailwind + design system"]
+    },
+    {
+      "title": "[Docs] Write API documentation with example requests",
+      "body": "## Summary\nCreate developer docs for the REST API with curl examples for each endpoint.\n\n## Acceptance Criteria\n- [ ] Each of the 18 endpoints has a section with: method, path, auth, request body, response body, example curl\n- [ ] Error codes documented with examples\n- [ ] Authentication flow documented step-by-step\n- [ ] Pagination query params explained\n\n## Files/Paths Touched\n- `docs/api/README.md`\n\n## Definition of Done\nA new developer can understand and use the API from the docs alone.",
+      "labels": ["area:docs", "type:chore", "prio:P2"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "backend",
+      "priority": "P2",
+      "estimate": "M",
+      "deps": ["[Backend] Implement document CRUD (list, get, create, update, delete)"]
+    },
+    {
+      "title": "[Docs] Write getting started guide for local development",
+      "body": "## Summary\nDeveloper onboarding guide: how to clone, setup, and run the full stack locally.\n\n## Acceptance Criteria\n- [ ] Prerequisites (Go 1.22, Node 20, Docker, Supabase CLI)\n- [ ] Clone + install steps\n- [ ] Environment variable setup (`.env.example` → `.env`)\n- [ ] Database setup (migrate + seed)\n- [ ] Run backend (`go run ...`) and frontend (`npm run dev`)\n- [ ] Verify everything works (smoke test steps)\n\n## Files/Paths Touched\n- `docs/getting-started.md` or `CONTRIBUTING.md`\n\n## Definition of Done\nA new developer can go from clone to running app in under 15 minutes.",
+      "labels": ["area:docs", "type:chore", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "lead",
+      "priority": "P1",
+      "estimate": "S",
+      "deps": ["[Infra] Initialize monorepo structure (apps/api + apps/web)", "[Infra] Create database migrations (5 tables)"]
+    },
+    {
+      "title": "[Frontend] Add keyboard shortcuts (undo, redo, delete, select all)",
+      "body": "## Summary\nGlobal keyboard shortcuts for common editor actions.\n\n## Acceptance Criteria\n- [ ] `Ctrl+Z` → undo\n- [ ] `Ctrl+Shift+Z` / `Ctrl+Y` → redo\n- [ ] `Delete` / `Backspace` → delete selected nodes/edges\n- [ ] `Ctrl+A` → select all\n- [ ] `Ctrl+S` → save\n- [ ] `Escape` → clear selection / cancel connection\n- [ ] Shortcuts only active when editor is focused (not in text inputs)\n\n## Files/Paths Touched\n- `apps/web/src/routes/(app)/editor/[id]/+page.svelte` (keydown handler)\n\n## Definition of Done\nAll shortcuts work correctly. Don't interfere with text input fields.",
+      "labels": ["area:frontend", "type:feature", "prio:P1"],
+      "milestone": "MVP-2 Polish",
+      "assignee_hint": "frontend",
+      "priority": "P1",
+      "estimate": "S",
+      "deps": ["[Frontend] Implement Svelte stores (document, canvas, selection, history)"]
+    },
+    {
+      "title": "[Backend] Add pagination helpers and common DTOs",
+      "body": "## Summary\nShared pagination query parsing, response meta, and base repository helpers.\n\n## Acceptance Criteria\n- [ ] `dto/common.go` — `PaginationQuery` (page, per_page with defaults and max), `PaginationMeta` (total, page, per_page, total_pages), `ErrorResponse`\n- [ ] `repository/base.go` — `ApplyPagination(query *bun.SelectQuery, p PaginationQuery)` helper\n- [ ] `pkg/response.go` — `WritePaginated(c, data, meta)` helper\n- [ ] All list endpoints use shared pagination\n\n## Files/Paths Touched\n- `apps/api/internal/dto/common.go`\n- `apps/api/internal/repository/base.go`\n- `apps/api/internal/pkg/response.go`\n\n## Definition of Done\nList endpoints return correct pagination meta. `?page=2&per_page=5` works.",
+      "labels": ["area:backend", "type:feature", "prio:P1"],
+      "milestone": "MVP-1 Core",
+      "assignee_hint": "backend",
+      "priority": "P1",
+      "estimate": "S",
+      "deps": ["[Backend] Setup Bun ORM + database connection"]
+    }
+  ]
+}

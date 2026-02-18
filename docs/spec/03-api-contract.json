@@ -1,0 +1,605 @@
+{
+  "api_info": {
+    "title": "GraDiOl MVP REST API",
+    "version": "1.0.0",
+    "base_url": "/api",
+    "description": "Planned REST API for GraDiOl — hybrid diagram editor with DSL + visual canvas. All endpoints will require Supabase JWT unless noted."
+  },
+
+  "auth": {
+    "type": "bearer",
+    "scheme": "Supabase JWT",
+    "header": "Authorization: Bearer <access_token>",
+    "provider": "Supabase Auth",
+    "flows": ["Google OAuth 2.0", "Magic Link (email)"],
+    "token_validation": "Go Fiber middleware will validate JWT signature using Supabase JWT secret. User ID is extracted from the sub claim via auth.uid().",
+    "session_refresh": "Frontend will handle token refresh via Supabase SDK. httpOnly cookie stores refresh token.",
+    "notes": [
+      "All /api/* endpoints require valid JWT except GET /api/health",
+      "POST /api/auth/callback will be called by frontend after Supabase OAuth flow completes",
+      "GET /api/auth/me returns the current user's profile from JWT"
+    ]
+  },
+
+  "error_model": {
+    "schema": {
+      "error": {
+        "type": "object",
+        "properties": {
+          "code":    { "type": "string",  "example": "NOT_FOUND",           "description": "Machine-readable error code" },
+          "message": { "type": "string",  "example": "Document not found",  "description": "Human-readable error description" },
+          "details": { "type": "object",  "nullable": true,                 "description": "Optional field-level validation errors" }
+        },
+        "required": ["code", "message"]
+      }
+    },
+    "codes": {
+      "BAD_REQUEST":     { "http": 400, "description": "Malformed JSON, missing required fields, or invalid field values" },
+      "UNAUTHORIZED":    { "http": 401, "description": "Missing or invalid JWT token" },
+      "FORBIDDEN":       { "http": 403, "description": "Valid token but insufficient permissions (e.g., viewer trying to edit)" },
+      "NOT_FOUND":       { "http": 404, "description": "Resource does not exist or user has no access" },
+      "CONFLICT":        { "http": 409, "description": "Duplicate resource (e.g., workspace slug already exists)" },
+      "UNPROCESSABLE":   { "http": 422, "description": "Semantic validation failed (e.g., invalid diagram_type)" },
+      "RATE_LIMITED":    { "http": 429, "description": "Too many requests" },
+      "INTERNAL_ERROR":  { "http": 500, "description": "Unexpected server error" }
+    }
+  },
+
+  "endpoints": [
+    {
+      "group": "Health",
+      "method": "GET",
+      "path": "/api/health",
+      "summary": "Health check",
+      "auth_required": false,
+      "query": null,
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "status": "string",
+            "timestamp": "string (ISO 8601)"
+          },
+          "example": { "status": "ok", "timestamp": "2026-02-17T10:00:00Z" }
+        }
+      }
+    },
+
+    {
+      "group": "Auth",
+      "method": "POST",
+      "path": "/api/auth/callback",
+      "summary": "Exchange Supabase auth code for session. Called by frontend after OAuth/Magic Link flow completes.",
+      "auth_required": false,
+      "query": null,
+      "body": {
+        "schema": {
+          "access_token":  { "type": "string", "required": true },
+          "refresh_token": { "type": "string", "required": true }
+        }
+      },
+      "response": {
+        "200": {
+          "schema": {
+            "token": "string",
+            "user": {
+              "id": "string (UUID)",
+              "email": "string",
+              "full_name": "string | null",
+              "avatar_url": "string | null"
+            }
+          }
+        },
+        "401": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Auth",
+      "method": "GET",
+      "path": "/api/auth/me",
+      "summary": "Get current authenticated user's profile",
+      "auth_required": true,
+      "query": null,
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "id": "string (UUID)",
+            "email": "string",
+            "full_name": "string | null",
+            "avatar_url": "string | null"
+          }
+        },
+        "401": { "$ref": "#/error_model" }
+      }
+    },
+
+    {
+      "group": "Workspaces",
+      "method": "GET",
+      "path": "/api/workspaces",
+      "summary": "List all workspaces the current user is a member of",
+      "auth_required": true,
+      "query": {
+        "page":     { "type": "integer", "default": 1,  "description": "Page number (1-based)" },
+        "per_page": { "type": "integer", "default": 20, "max": 100, "description": "Items per page" }
+      },
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "data": [
+              {
+                "id": "string (UUID)",
+                "name": "string",
+                "slug": "string",
+                "owner_id": "string (UUID)",
+                "description": "string | null",
+                "role": "string (owner|editor|viewer)",
+                "member_count": "integer",
+                "created_at": "string (ISO 8601)",
+                "updated_at": "string (ISO 8601)"
+              }
+            ],
+            "meta": {
+              "page": "integer",
+              "per_page": "integer",
+              "total": "integer",
+              "total_pages": "integer"
+            }
+          }
+        }
+      }
+    },
+    {
+      "group": "Workspaces",
+      "method": "POST",
+      "path": "/api/workspaces",
+      "summary": "Create a new workspace. Current user becomes owner automatically.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "name":        { "type": "string",  "required": true,  "min_length": 1, "max_length": 100 },
+          "description": { "type": "string",  "required": false, "max_length": 500 }
+        },
+        "example": { "name": "Skripsi", "description": "Workspace for thesis diagrams" }
+      },
+      "response": {
+        "201": {
+          "schema": {
+            "id": "string (UUID)",
+            "name": "string",
+            "slug": "string",
+            "owner_id": "string (UUID)",
+            "description": "string | null",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "400": { "$ref": "#/error_model" },
+        "409": { "$ref": "#/error_model", "note": "Slug conflict" }
+      }
+    },
+    {
+      "group": "Workspaces",
+      "method": "PUT",
+      "path": "/api/workspaces/:id",
+      "summary": "Update workspace name/description. Owner only.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "name":        { "type": "string",  "required": false, "min_length": 1, "max_length": 100 },
+          "description": { "type": "string",  "required": false, "max_length": 500 }
+        }
+      },
+      "response": {
+        "200": {
+          "schema": {
+            "id": "string (UUID)",
+            "name": "string",
+            "slug": "string",
+            "owner_id": "string (UUID)",
+            "description": "string | null",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "400": { "$ref": "#/error_model" },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Workspaces",
+      "method": "DELETE",
+      "path": "/api/workspaces/:id",
+      "summary": "Delete a workspace and all its projects/documents (cascade). Owner only.",
+      "auth_required": true,
+      "query": null,
+      "body": null,
+      "response": {
+        "204": { "description": "No content — workspace deleted successfully" },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+
+    {
+      "group": "Projects",
+      "method": "GET",
+      "path": "/api/workspaces/:id/projects",
+      "summary": "List all projects in a workspace. Requires workspace membership.",
+      "auth_required": true,
+      "query": {
+        "page":     { "type": "integer", "default": 1 },
+        "per_page": { "type": "integer", "default": 20, "max": 100 }
+      },
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "data": [
+              {
+                "id": "string (UUID)",
+                "workspace_id": "string (UUID)",
+                "name": "string",
+                "description": "string | null",
+                "document_count": "integer",
+                "created_by": "string (UUID) | null",
+                "created_at": "string (ISO 8601)",
+                "updated_at": "string (ISO 8601)"
+              }
+            ],
+            "meta": {
+              "page": "integer",
+              "per_page": "integer",
+              "total": "integer",
+              "total_pages": "integer"
+            }
+          }
+        },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Projects",
+      "method": "POST",
+      "path": "/api/projects",
+      "summary": "Create a new project in a workspace. Requires editor or owner role.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "workspace_id": { "type": "string (UUID)", "required": true },
+          "name":         { "type": "string",        "required": true,  "min_length": 1, "max_length": 100 },
+          "description":  { "type": "string",        "required": false, "max_length": 500 }
+        },
+        "example": { "workspace_id": "uuid-here", "name": "Bab 3", "description": "Diagram untuk bab 3" }
+      },
+      "response": {
+        "201": {
+          "schema": {
+            "id": "string (UUID)",
+            "workspace_id": "string (UUID)",
+            "name": "string",
+            "description": "string | null",
+            "created_by": "string (UUID)",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "400": { "$ref": "#/error_model" },
+        "403": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Projects",
+      "method": "PUT",
+      "path": "/api/projects/:id",
+      "summary": "Update project name/description. Requires editor or owner role in the parent workspace.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "name":        { "type": "string", "required": false, "min_length": 1, "max_length": 100 },
+          "description": { "type": "string", "required": false, "max_length": 500 }
+        }
+      },
+      "response": {
+        "200": {
+          "schema": {
+            "id": "string (UUID)",
+            "workspace_id": "string (UUID)",
+            "name": "string",
+            "description": "string | null",
+            "created_by": "string (UUID) | null",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "400": { "$ref": "#/error_model" },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Projects",
+      "method": "DELETE",
+      "path": "/api/projects/:id",
+      "summary": "Delete project and cascade-delete all documents inside. Owner role only.",
+      "auth_required": true,
+      "query": null,
+      "body": null,
+      "response": {
+        "204": { "description": "No content — project deleted successfully" },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+
+    {
+      "group": "Documents",
+      "method": "GET",
+      "path": "/api/projects/:id/documents",
+      "summary": "List all documents in a project. Requires workspace membership.",
+      "auth_required": true,
+      "query": {
+        "page":         { "type": "integer", "default": 1 },
+        "per_page":     { "type": "integer", "default": 20, "max": 100 },
+        "diagram_type": { "type": "string",  "required": false, "enum": ["flowchart", "erd", "usecase"], "description": "Filter by diagram type" },
+        "sort_by":      { "type": "string",  "default": "updated_at", "enum": ["updated_at", "created_at", "title"] },
+        "sort_order":   { "type": "string",  "default": "desc", "enum": ["asc", "desc"] }
+      },
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "data": [
+              {
+                "id": "string (UUID)",
+                "project_id": "string (UUID) | null",
+                "workspace_id": "string (UUID)",
+                "title": "string",
+                "diagram_type": "string",
+                "version": "integer",
+                "created_by": "string (UUID) | null",
+                "created_at": "string (ISO 8601)",
+                "updated_at": "string (ISO 8601)"
+              }
+            ],
+            "meta": {
+              "page": "integer",
+              "per_page": "integer",
+              "total": "integer",
+              "total_pages": "integer"
+            }
+          },
+          "note": "List response should omit content and view JSONB to reduce payload. Use GET /documents/:id for full data."
+        },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Documents",
+      "method": "GET",
+      "path": "/api/documents/:id",
+      "summary": "Get a single document with full content and view JSONB. Requires workspace membership.",
+      "auth_required": true,
+      "query": null,
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "id": "string (UUID)",
+            "project_id": "string (UUID) | null",
+            "workspace_id": "string (UUID)",
+            "title": "string",
+            "diagram_type": "string",
+            "content": {
+              "nodes": [
+                { "id": "string", "type": "string", "label": "string", "properties": "object" }
+              ],
+              "edges": [
+                { "id": "string", "source": "string", "target": "string", "label": "string", "type": "string" }
+              ]
+            },
+            "view": {
+              "positions": "object (nodeId → {x, y})",
+              "styles": "object (nodeId → {fill, fontSize, ...})",
+              "routing": "object (edgeId → {type, points})"
+            },
+            "version": "integer",
+            "created_by": "string (UUID) | null",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Documents",
+      "method": "POST",
+      "path": "/api/documents",
+      "summary": "Create a new document. Requires editor or owner role in the workspace.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "workspace_id": { "type": "string (UUID)", "required": true,  "description": "Parent workspace" },
+          "project_id":   { "type": "string (UUID)", "required": false, "description": "Optional parent project; null = orphan document" },
+          "title":        { "type": "string",        "required": false, "default": "Untitled", "max_length": 200 },
+          "diagram_type": { "type": "string",        "required": true,  "enum": ["flowchart", "erd", "usecase"] },
+          "content":      { "type": "object (JSONB)", "required": false, "description": "Initial semantic model; defaults to empty nodes/edges" },
+          "view":         { "type": "object (JSONB)", "required": false, "description": "Initial visual overrides; defaults to empty" }
+        },
+        "example": {
+          "workspace_id": "uuid-here",
+          "project_id": "uuid-here",
+          "title": "Login Flow",
+          "diagram_type": "flowchart"
+        }
+      },
+      "response": {
+        "201": {
+          "schema": {
+            "id": "string (UUID)",
+            "project_id": "string (UUID) | null",
+            "workspace_id": "string (UUID)",
+            "title": "string",
+            "diagram_type": "string",
+            "content": "object (JSONB)",
+            "view": "object (JSONB)",
+            "version": "integer",
+            "created_by": "string (UUID)",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "400": { "$ref": "#/error_model" },
+        "403": { "$ref": "#/error_model" },
+        "422": { "$ref": "#/error_model", "note": "Invalid diagram_type value" }
+      }
+    },
+    {
+      "group": "Documents",
+      "method": "PUT",
+      "path": "/api/documents/:id",
+      "summary": "Update a document (title, content, view, or project_id). Requires editor or owner role. Should increment version on content/view change.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "title":      { "type": "string",         "required": false, "max_length": 200 },
+          "project_id": { "type": "string (UUID) | null", "required": false, "description": "Move document to a different project or set null for orphan" },
+          "content":    { "type": "object (JSONB)",  "required": false },
+          "view":       { "type": "object (JSONB)",  "required": false }
+        },
+        "notes": [
+          "At least one field must be provided",
+          "Updating content or view should auto-increment the version field",
+          "updated_at should be set to now() on every successful update"
+        ]
+      },
+      "response": {
+        "200": {
+          "schema": {
+            "id": "string (UUID)",
+            "project_id": "string (UUID) | null",
+            "workspace_id": "string (UUID)",
+            "title": "string",
+            "diagram_type": "string",
+            "content": "object (JSONB)",
+            "view": "object (JSONB)",
+            "version": "integer",
+            "created_by": "string (UUID) | null",
+            "created_at": "string (ISO 8601)",
+            "updated_at": "string (ISO 8601)"
+          }
+        },
+        "400": { "$ref": "#/error_model" },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+    {
+      "group": "Documents",
+      "method": "DELETE",
+      "path": "/api/documents/:id",
+      "summary": "Delete a document. Owner role only.",
+      "auth_required": true,
+      "query": null,
+      "body": null,
+      "response": {
+        "204": { "description": "No content — document deleted successfully" },
+        "403": { "$ref": "#/error_model" },
+        "404": { "$ref": "#/error_model" }
+      }
+    },
+
+    {
+      "group": "Documents — Recent",
+      "method": "GET",
+      "path": "/api/documents/recent",
+      "summary": "List recently updated documents across all workspaces the user belongs to. Intended for dashboard 'Recent Documents' widget.",
+      "auth_required": true,
+      "query": {
+        "limit": { "type": "integer", "default": 10, "max": 50, "description": "Number of recent documents to return" }
+      },
+      "body": null,
+      "response": {
+        "200": {
+          "schema": {
+            "data": [
+              {
+                "id": "string (UUID)",
+                "title": "string",
+                "diagram_type": "string",
+                "workspace_id": "string (UUID)",
+                "workspace_name": "string",
+                "project_id": "string (UUID) | null",
+                "project_name": "string | null",
+                "updated_at": "string (ISO 8601)"
+              }
+            ]
+          }
+        }
+      }
+    },
+
+    {
+      "group": "Export",
+      "method": "POST",
+      "path": "/api/documents/:id/export",
+      "summary": "Export a document as PNG or SVG. May be implemented server-side or return data for client-side rendering.",
+      "auth_required": true,
+      "query": null,
+      "body": {
+        "schema": {
+          "format":     { "type": "string",  "required": true, "enum": ["png", "svg"] },
+          "scale":      { "type": "number",  "required": false, "default": 2, "description": "Resolution scale factor (PNG only). 1x = 72 DPI, 2x = 144 DPI" },
+          "background": { "type": "string",  "required": false, "default": "#ffffff", "description": "Background color (hex). Use 'transparent' for no background (PNG with alpha)" },
+          "padding":    { "type": "integer", "required": false, "default": 20, "description": "Padding in pixels around the diagram content" }
+        },
+        "example": { "format": "png", "scale": 2, "background": "#ffffff", "padding": 20 }
+      },
+      "response": {
+        "200": {
+          "content_type_png": "image/png",
+          "content_type_svg": "image/svg+xml",
+          "description": "Binary file download (PNG) or SVG XML string. Response should include Content-Disposition: attachment header.",
+          "headers": {
+            "Content-Disposition": "attachment; filename=\"{document_title}.{format}\"",
+            "Content-Type": "image/png | image/svg+xml"
+          }
+        },
+        "400": { "$ref": "#/error_model", "note": "Invalid format value" },
+        "404": { "$ref": "#/error_model" }
+      }
+    }
+  ],
+
+  "rate_limit_notes": {
+    "strategy": "Token bucket per user (identified by JWT sub claim)",
+    "implementation": "Fiber rate-limit middleware with Redis backend",
+    "limits": [
+      { "scope": "global",    "limit": "100 requests / minute per user",   "note": "Applies to all authenticated endpoints" },
+      { "scope": "export",    "limit": "10 requests / minute per user",    "note": "Export is CPU-intensive; stricter limit to prevent abuse" },
+      { "scope": "write",     "limit": "30 requests / minute per user",    "note": "POST/PUT/DELETE operations" },
+      { "scope": "health",    "limit": "no limit",                          "note": "GET /api/health is unauthenticated and unmetered" }
+    ],
+    "headers": {
+      "X-RateLimit-Limit": "Max requests in the current window",
+      "X-RateLimit-Remaining": "Remaining requests in the current window",
+      "X-RateLimit-Reset": "UTC epoch seconds when the window resets"
+    },
+    "exceeded_response": {
+      "status": 429,
+      "body": { "code": "RATE_LIMITED", "message": "Too many requests. Please try again later." }
+    }
+  }
+}

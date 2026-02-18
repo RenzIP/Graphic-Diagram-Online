@@ -1,0 +1,286 @@
+{
+  "problem": "Existing diagram tools are split into two camps: visual drag-and-drop editors (draw.io, Lucidchart) lack git-friendly versioning and text-based integration, while text-based generators (Mermaid, PlantUML) lack interactive visual editing. No mainstream platform offers bidirectional text↔visual conversion, and none can ingest the ASCII diagrams frequently produced by AI/LLM tools. Teams are forced to choose between visual flexibility and developer-workflow compatibility.",
+
+  "goals": [
+    "Deliver a hybrid diagram editor that supports both a custom DSL text input and an interactive SVG visual canvas with bidirectional sync (Text ⇄ Diagram).",
+    "Enable users to create, read, update, and delete diagrams organized in a Workspace → Project → Document hierarchy.",
+    "Provide export to PNG and SVG so diagrams are immediately usable in docs, presentations, and repos.",
+    "Implement secure authentication and session management via Supabase Auth (OAuth + Magic Link).",
+    "Support Flowchart, ERD, and Use Case Diagram types in the initial release.",
+    "Establish a modular, scalable architecture (SvelteKit + Go/Fiber + PostgreSQL) that can grow into realtime collaboration, AI features, and a template marketplace."
+  ],
+
+  "non_goals": [
+    "Realtime multi-user collaboration (WebSocket rooms, cursors, presence) — deferred to Phase 3.",
+    "AI-assisted diagram generation or ASCII-to-Diagram conversion — deferred to Phase 4.",
+    "Version history with visual diff — deferred to Phase 3.",
+    "Template marketplace or public template gallery — deferred to Phase 4.",
+    "PDF export — deferred to Phase 4.",
+    "Full-text search across documents — deferred to Phase 4.",
+    "Notification system (in-app or email) — deferred to Phase 4.",
+    "Mobile/touch-optimized UI — deferred to Phase 4.",
+    "On-premise deployment or enterprise SSO — deferred to Phase 4.",
+    "Billing, subscription tiers, or payment integration."
+  ],
+
+  "personas": [
+    {
+      "name": "Dimas — Software Engineering Student",
+      "description": "A university student who frequently creates Flowcharts, ERDs, and Use Case Diagrams for coursework and thesis documentation. He values speed, simplicity, and the ability to version-control diagrams alongside code in Git.",
+      "pain_points": [
+        "Manually redrawing diagrams after code changes.",
+        "Cannot version diagram files meaningfully in Git.",
+        "Switching between Mermaid (text) and draw.io (visual) is tedious."
+      ]
+    },
+    {
+      "name": "Rina — Junior Backend Developer",
+      "description": "A developer in a small team who designs database schemas and system flows. She often pastes AI-generated ASCII diagrams into documentation and wants a proper visual form.",
+      "pain_points": [
+        "AI output (ASCII diagrams) cannot be directly imported into any editor.",
+        "Lucidchart is expensive for her small team.",
+        "Existing free tools lack a good text-to-visual workflow."
+      ]
+    },
+    {
+      "name": "Pak Arif — IT Lecturer",
+      "description": "An academic who reviews and grades student-submitted diagrams. He needs quick access to multiple diagrams organized by workspace/project, with the ability to export high-quality images for feedback.",
+      "pain_points": [
+        "Students submit diagrams in inconsistent formats (screenshots, PDFs, Mermaid text).",
+        "No centralized platform to organize and review student work.",
+        "Export quality from free tools is often poor."
+      ]
+    }
+  ],
+
+  "user_stories": [
+    {
+      "id": "US-01",
+      "persona": "Dimas",
+      "story": "As a student, I want to register and log in with my Google account so that I can start creating diagrams without a lengthy sign-up process.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-02",
+      "persona": "Dimas",
+      "story": "As a student, I want to create a new workspace and organize my diagrams into projects so that my coursework diagrams are neatly separated.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-03",
+      "persona": "Rina",
+      "story": "As a developer, I want to create a new diagram document, choose a diagram type (Flowchart / ERD / Use Case), and start editing on a visual canvas with drag-and-drop nodes.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-04",
+      "persona": "Rina",
+      "story": "As a developer, I want to type diagram definitions in a text editor (DSL) and see the visual canvas update in real time so that I can rapidly prototype diagrams.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-05",
+      "persona": "Dimas",
+      "story": "As a student, I want visual edits on the canvas (moving nodes, adding edges) to be reflected back in the DSL text so that I always have a text-based source of truth.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-06",
+      "persona": "Rina",
+      "story": "As a developer, I want to connect nodes with edges (arrow, relation) using click-to-connect and have auto-routing (bezier, straight, orthogonal).",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-07",
+      "persona": "Pak Arif",
+      "story": "As a lecturer, I want to export any diagram as PNG or SVG so that I can embed it in grading documents or presentations.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-08",
+      "persona": "Dimas",
+      "story": "As a student, I want to save my diagram to the cloud and reopen it later from my dashboard so that my work is never lost.",
+      "priority": "must-have"
+    },
+    {
+      "id": "US-09",
+      "persona": "Rina",
+      "story": "As a developer, I want to customize node styles (color, border, font) and edge labels so that my diagrams are readable and presentable.",
+      "priority": "should-have"
+    },
+    {
+      "id": "US-10",
+      "persona": "Dimas",
+      "story": "As a student, I want undo/redo support (Ctrl+Z / Ctrl+Shift+Z) so that I can experiment freely without fear of losing previous states.",
+      "priority": "should-have"
+    },
+    {
+      "id": "US-11",
+      "persona": "Pak Arif",
+      "story": "As a lecturer, I want a dashboard showing recent documents and quick actions (new diagram, open workspace) so that I can navigate efficiently.",
+      "priority": "should-have"
+    },
+    {
+      "id": "US-12",
+      "persona": "Rina",
+      "story": "As a developer, I want the canvas to support pan (scroll/drag), zoom (scroll wheel/pinch), snap-to-grid, and a minimap overview for large diagrams.",
+      "priority": "should-have"
+    }
+  ],
+
+  "acceptance_tests": [
+    {
+      "id": "AT-01",
+      "user_story": "US-01",
+      "scenario": "User clicks 'Login with Google', completes OAuth flow, and is redirected to the dashboard with their profile name visible."
+    },
+    {
+      "id": "AT-02",
+      "user_story": "US-02",
+      "scenario": "User creates a workspace named 'Skripsi', then creates a project 'Bab 3' inside it. Both appear in the sidebar/dashboard hierarchy."
+    },
+    {
+      "id": "AT-03",
+      "user_story": "US-03",
+      "scenario": "User clicks 'New Document', selects 'Flowchart', and sees an empty SVG canvas with a shape palette containing Start, Process, Decision, and End nodes."
+    },
+    {
+      "id": "AT-04",
+      "user_story": "US-04",
+      "scenario": "User types `@flowchart \"Test\"\\nstart \"A\"\\nprocess \"B\"\\nstart -> \"B\"` in the DSL editor. The canvas renders node A, node B, and an edge between them within 500ms."
+    },
+    {
+      "id": "AT-05",
+      "user_story": "US-05",
+      "scenario": "User drags a new Process node onto the canvas and connects it. The DSL text panel updates to include the new node and edge definitions."
+    },
+    {
+      "id": "AT-06",
+      "user_story": "US-06",
+      "scenario": "User clicks the output port of node A, drags to node B, and an auto-routed edge appears with a selectable routing type (bezier/straight/orthogonal)."
+    },
+    {
+      "id": "AT-07",
+      "user_story": "US-07",
+      "scenario": "User clicks 'Export > PNG'. A PNG file downloads with all visible nodes and edges rendered at ≥2x resolution. Repeat for SVG; the file contains valid SVG markup."
+    },
+    {
+      "id": "AT-08",
+      "user_story": "US-08",
+      "scenario": "User saves a diagram, closes the browser, reopens the app, navigates to the document — the diagram loads with all nodes, edges, positions, and styles intact."
+    },
+    {
+      "id": "AT-09",
+      "user_story": "US-09",
+      "scenario": "User selects a node, opens the Property Panel, changes fill color to #FF5733, and the node immediately updates on canvas. After save and reload, the color persists."
+    },
+    {
+      "id": "AT-10",
+      "user_story": "US-10",
+      "scenario": "User adds a node, presses Ctrl+Z — the node disappears. Presses Ctrl+Shift+Z — the node reappears. Undo stack handles at least 50 operations."
+    },
+    {
+      "id": "AT-11",
+      "user_story": "US-11",
+      "scenario": "Dashboard shows the 5 most recently edited documents with title, diagram type, and last-modified timestamp. Clicking one opens the editor."
+    },
+    {
+      "id": "AT-12",
+      "user_story": "US-12",
+      "scenario": "User scrolls to zoom in/out (0.25x–4x range), drags to pan, and toggles the minimap. Nodes snap to a 20px grid when snap-to-grid is enabled."
+    }
+  ],
+
+  "MVP_scope": {
+    "summary": "A web-based hybrid diagram editor with DSL text ↔ visual canvas, workspace/project/document management, Supabase auth, and PNG/SVG export.",
+    "diagram_types": ["Flowchart", "ERD", "Use Case Diagram"],
+    "features": [
+      "Authentication via Supabase Auth (Google OAuth + Magic Link)",
+      "Workspace CRUD (create, rename, delete)",
+      "Project CRUD within workspaces",
+      "Document CRUD with diagram_type selector",
+      "SVG-based visual canvas: pan, zoom, grid, minimap, snap-to-grid",
+      "Node rendering: drag-and-drop from palette, resize, inline text editing, style customization",
+      "Edge rendering: click-to-connect, auto-routing (bezier/straight/orthogonal), edge labels",
+      "DSL text editor with syntax for defining nodes and edges",
+      "Text-to-Diagram: DSL parser → AST → semantic model → canvas render with auto-layout (Dagre)",
+      "Diagram-to-Text: semantic model → DSL serializer (bidirectional sync)",
+      "Undo/redo (local command history stack)",
+      "Save/load documents via REST API ↔ PostgreSQL JSONB",
+      "Export to PNG (Canvas API → toBlob) and SVG (DOM serialization)",
+      "Dashboard with recent documents and quick actions",
+      "Multi-select, copy/paste, delete, keyboard shortcuts"
+    ],
+    "tech_stack": {
+      "frontend": "SvelteKit (TypeScript) + TailwindCSS v4",
+      "backend": "Golang + Fiber framework",
+      "database": "PostgreSQL (Supabase managed) with JSONB document storage",
+      "auth": "Supabase Auth (JWT)",
+      "orm": "Bun (uptrace/bun)",
+      "layout_engine": "Dagre / ELK",
+      "deployment_frontend": "Vercel",
+      "deployment_backend": "Google Cloud Run"
+    }
+  },
+
+  "out_of_scope": [
+    "Realtime collaboration (WebSocket rooms, cursor tracking, presence, node locking)",
+    "AI-assisted diagram generation",
+    "ASCII-to-Diagram conversion",
+    "Version history and visual diff",
+    "Template system and marketplace",
+    "PDF export",
+    "Full-text search across documents",
+    "Notification system",
+    "Sharing and permission management (owner/editor/viewer roles on documents)",
+    "Mobile/touch-optimized responsive design",
+    "Enterprise SSO and on-premise deployment",
+    "Billing and subscription management",
+    "Sequence, Activity, BPMN, Class, Deployment, Gantt, Mind Map diagram types"
+  ],
+
+  "risks": [
+    {
+      "id": "R-01",
+      "risk": "DSL bidirectional sync complexity",
+      "description": "Maintaining a roundtrip guarantee (Text → Diagram → Text = identical output) across three diagram types is technically challenging. Layout changes may introduce drift.",
+      "mitigation": "Separate semantic model (content JSONB) from visual overrides (view JSONB). Roundtrip tests for each diagram type in CI.",
+      "severity": "high"
+    },
+    {
+      "id": "R-02",
+      "risk": "SVG canvas performance on large diagrams",
+      "description": "Browser SVG rendering may degrade with 200+ nodes due to DOM overhead.",
+      "mitigation": "Implement virtualization (render only visible viewport nodes). Benchmark at 100/200/500 node counts. Consider canvas fallback for extreme cases.",
+      "severity": "medium"
+    },
+    {
+      "id": "R-03",
+      "risk": "Supabase Auth token handling across SvelteKit SSR and Go backend",
+      "description": "JWT validation must work consistently in SvelteKit server hooks (for route guards) and Fiber middleware (for API auth). Token refresh edge cases may cause session drops.",
+      "mitigation": "Use Supabase's official SvelteKit SDK. Implement silent token refresh with httpOnly cookies. Add integration tests for expired/refreshed token scenarios.",
+      "severity": "medium"
+    },
+    {
+      "id": "R-04",
+      "risk": "Custom DSL parser maintenance burden",
+      "description": "Building and maintaining a custom DSL parser (tokenizer → AST → semantic model) for multiple diagram types requires significant effort and may introduce subtle bugs.",
+      "mitigation": "Start with Flowchart-only parser, expand incrementally. Use a parser-combinator approach or PEG grammar for maintainability. Comprehensive unit tests per diagram type.",
+      "severity": "medium"
+    },
+    {
+      "id": "R-05",
+      "risk": "Scope creep toward collaboration features",
+      "description": "The full vision includes WebSocket collab, AI features, and marketplace. Pressure to add these before MVP is stable could delay launch.",
+      "mitigation": "Strict MVP boundary enforcement. Ship core editor + auth + export first. Defer all Phase 2+ items explicitly.",
+      "severity": "low"
+    },
+    {
+      "id": "R-06",
+      "risk": "Cross-browser SVG rendering inconsistencies",
+      "description": "SVG rendering and Canvas API export (toBlob) may behave differently across Chrome, Firefox, and Safari.",
+      "mitigation": "Target Chrome as primary browser. Add browser-specific export fallbacks. Test on top 3 browsers in CI.",
+      "severity": "low"
+    }
+  ]
+}
