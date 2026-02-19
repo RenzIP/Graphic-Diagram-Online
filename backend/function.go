@@ -3,7 +3,33 @@
 package p
 
 import (
-	// Blank-import the gcf package to trigger its init() which registers
-	// the Cloud Function via functions.HTTP("GraDiOlAPI", handler).
-	_ "github.com/renzip/GraDiOl/gcf"
+	"log"
+	"net/http"
+	"sync"
+
+	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
+
+	"github.com/renzip/GraDiOl/internal/app"
 )
+
+var (
+	instance *app.Instance
+	once     sync.Once
+)
+
+func init() {
+	functions.HTTP("GraDiOlAPI", GraDiOlAPI)
+}
+
+// GraDiOlAPI is the exported Cloud Function entry point.
+func GraDiOlAPI(w http.ResponseWriter, r *http.Request) {
+	once.Do(func() {
+		log.Println("☁️  GraDiOl Cloud Function cold start — initializing app...")
+		instance = app.New()
+		log.Println("✓ GraDiOl Cloud Function ready")
+	})
+
+	handler := adaptor.FiberApp(instance.App)
+	handler(w, r)
+}
