@@ -70,10 +70,13 @@ export function initAuthListener(): () => void {
 		} else if (event === 'TOKEN_REFRESHED' && session) {
 			// Supabase refreshed the token — re-sync with backend
 			try {
-				const result = await authApi.callback({
-					access_token: session.access_token,
-					refresh_token: session.refresh_token
-				});
+				const result = await authApi.callback(
+					{
+						access_token: session.access_token,
+						refresh_token: session.refresh_token
+					},
+					session.access_token
+				);
 				storeAuthData(result.token);
 				authState.update((s) => ({
 					...s,
