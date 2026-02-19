@@ -70,7 +70,7 @@ jobs:
         run: |
           gcloud functions deploy gradiol-api \
             --gen2 \
-            --runtime=go122 \
+            --runtime=go123 \
             --region=${{ secrets.GCP_REGION }} \
             --source=. \
             --entry-point=GraDiOlAPI \

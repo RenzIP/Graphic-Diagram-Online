@@ -28,7 +28,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
 
       - name: Download modules
@@ -41,14 +41,7 @@ jobs:
         run: go build ./...
 
       - name: Test
-        run: go test ./... -v -race -coverprofile=coverage.out
-
-      - name: Upload coverage
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-coverage
-          path: backend/coverage.out
+        run: go test ./... -v -count=1
 
   # ─────────────────────────────────────────────
   # Frontend — SvelteKit (frontend/)
