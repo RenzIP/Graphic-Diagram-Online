@@ -80,14 +80,7 @@ jobs:
             --timeout=60s \
             --min-instances=0 \
             --max-instances=10 \
-            --set-env-vars="\
-              ENV=production,\
-              DATABASE_URL=${{ secrets.DATABASE_URL }},\
-              SUPABASE_URL=${{ secrets.SUPABASE_URL }},\
-              SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }},\
-              SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }},\
-              FRONTEND_URL=${{ secrets.FRONTEND_URL }},\
-              REDIS_URL=${{ secrets.REDIS_URL }}"
+            --set-env-vars="ENV=production,DATABASE_URL=${{ secrets.DATABASE_URL }},SUPABASE_URL=${{ secrets.SUPABASE_URL }},SUPABASE_JWT_SECRET=${{ secrets.SUPABASE_JWT_SECRET }},SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }},FRONTEND_URL=${{ secrets.FRONTEND_URL }},REDIS_URL=${{ secrets.REDIS_URL }}"
 
       - name: Verify deployment
         run: |
