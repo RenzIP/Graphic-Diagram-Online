@@ -13,8 +13,7 @@ export const authApi = {
 	 * Exchange Supabase auth tokens for a backend session.
 	 * Called after OAuth/Magic Link flow completes.
 	 */
-	callback: (data: AuthCallbackRequest) =>
-		api.post<AuthCallbackResponse>('/auth/callback', data),
+	callback: (data: AuthCallbackRequest) => api.post<AuthCallbackResponse>('/auth/callback', data),
 
 	/** Get current authenticated user's profile */
 	me: () => api.get<AuthUser>('/auth/me')

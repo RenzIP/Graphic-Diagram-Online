@@ -157,92 +157,117 @@
 
 			<div class="mb-6 flex items-center justify-between">
 				<h1 class="text-2xl font-bold text-white">Projects</h1>
-				<span class="text-sm text-slate-500">{projects.length} project{projects.length !== 1 ? 's' : ''}</span>
+				<span class="text-sm text-slate-500"
+					>{projects.length} project{projects.length !== 1 ? 's' : ''}</span
+				>
 			</div>
 
 			{#if loading}
 				<div class="flex items-center justify-center py-16">
-					<div class="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500"></div>
+					<div
+						class="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500"
+					></div>
 					<span class="ml-3 text-sm text-slate-500">Loading projects...</span>
 				</div>
 			{:else}
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-				{#each projects as project}
-					<Card
-						class="group relative cursor-pointer overflow-hidden p-0 transition-colors hover:border-slate-600"
-					>
-						<div
-							class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 transition-opacity group-hover:opacity-100"
-						></div>
-						<div class="p-6">
-							<div class="mb-4 flex items-start justify-between">
-								<div
-									class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400"
+				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+					{#each projects as project}
+						<Card
+							class="group relative cursor-pointer overflow-hidden p-0 transition-colors hover:border-slate-600"
+						>
+							<div
+								class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 transition-opacity group-hover:opacity-100"
+							></div>
+							<div class="p-6">
+								<div class="mb-4 flex items-start justify-between">
+									<div
+										class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400"
+									>
+										<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+											/>
+										</svg>
+									</div>
+									<div class="flex gap-1">
+										<button
+											class="rounded p-1 text-slate-500 transition-colors hover:bg-slate-800 hover:text-indigo-400"
+											title="Add document"
+											onclick={(e) => {
+												e.stopPropagation();
+												newDocProjectId = project.id;
+												showNewDocModal = true;
+											}}
+										>
+											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M12 4v16m8-8H4"
+												/>
+											</svg>
+										</button>
+										<button
+											class="rounded p-1 text-slate-500 transition-colors hover:bg-slate-800 hover:text-red-400"
+											title="Delete project"
+											onclick={(e) => {
+												e.stopPropagation();
+												deleteProject(project.id, project.name);
+											}}
+										>
+											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+												/>
+											</svg>
+										</button>
+									</div>
+								</div>
+								<h3
+									class="mb-1 text-lg font-bold text-white transition-colors group-hover:text-indigo-400"
 								>
-									<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-										/>
-									</svg>
-								</div>
-								<div class="flex gap-1">
-									<button
-										class="rounded p-1 text-slate-500 transition-colors hover:bg-slate-800 hover:text-indigo-400"
-										title="Add document"
-										onclick={(e) => { e.stopPropagation(); newDocProjectId = project.id; showNewDocModal = true; }}
+									{project.name}
+								</h3>
+								{#if project.description}
+									<p class="mb-2 line-clamp-2 text-sm text-slate-400">{project.description}</p>
+								{/if}
+								<div class="flex items-center gap-4 text-sm text-slate-500">
+									<span
+										>{project.document_count} document{project.document_count !== 1
+											? 's'
+											: ''}</span
 									>
-										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-										</svg>
-									</button>
-									<button
-										class="rounded p-1 text-slate-500 transition-colors hover:bg-slate-800 hover:text-red-400"
-										title="Delete project"
-										onclick={(e) => { e.stopPropagation(); deleteProject(project.id, project.name); }}
-									>
-										<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-										</svg>
-									</button>
+									<span>Updated {timeAgo(project.updated_at)}</span>
 								</div>
 							</div>
-							<h3
-								class="mb-1 text-lg font-bold text-white transition-colors group-hover:text-indigo-400"
-							>
-								{project.name}
-							</h3>
-							{#if project.description}
-								<p class="mb-2 line-clamp-2 text-sm text-slate-400">{project.description}</p>
-							{/if}
-							<div class="flex items-center gap-4 text-sm text-slate-500">
-								<span>{project.document_count} document{project.document_count !== 1 ? 's' : ''}</span>
-								<span>Updated {timeAgo(project.updated_at)}</span>
-							</div>
-						</div>
-					</Card>
-				{/each}
+						</Card>
+					{/each}
 
-				<!-- Create New Project Card -->
-				<button
-					class="flex h-full min-h-[160px] cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-800 p-6 text-slate-500 transition-all hover:border-indigo-500/50 hover:bg-slate-900/50 hover:text-indigo-400"
-					onclick={() => (showNewProjectModal = true)}
-				>
-					<div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
-						<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M12 4v16m8-8H4"
-							/>
-						</svg>
-					</div>
-					<span class="font-medium">Create New Project</span>
-				</button>
-			</div>
+					<!-- Create New Project Card -->
+					<button
+						class="flex h-full min-h-[160px] cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-800 p-6 text-slate-500 transition-all hover:border-indigo-500/50 hover:bg-slate-900/50 hover:text-indigo-400"
+						onclick={() => (showNewProjectModal = true)}
+					>
+						<div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
+							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 4v16m8-8H4"
+								/>
+							</svg>
+						</div>
+						<span class="font-medium">Create New Project</span>
+					</button>
+				</div>
 			{/if}
 		</div>
 	</main>
@@ -252,10 +277,18 @@
 <Modal bind:open={showNewProjectModal}>
 	<div class="p-6">
 		<h3 class="mb-4 text-lg font-semibold text-white">Create New Project</h3>
-		<form class="space-y-3" onsubmit={(e) => { e.preventDefault(); createProject(); }}>
+		<form
+			class="space-y-3"
+			onsubmit={(e) => {
+				e.preventDefault();
+				createProject();
+			}}
+		>
 			<Input label="Project Name" placeholder="My Project" bind:value={newProjectName} />
 			<div>
-				<label for="proj-desc" class="mb-1 block text-sm text-slate-400">Description (optional)</label>
+				<label for="proj-desc" class="mb-1 block text-sm text-slate-400"
+					>Description (optional)</label
+				>
 				<textarea
 					id="proj-desc"
 					bind:value={newProjectDescription}
@@ -265,8 +298,15 @@
 				></textarea>
 			</div>
 			<div class="flex justify-end gap-2 pt-2">
-				<Button variant="ghost" size="sm" onclick={() => (showNewProjectModal = false)}>Cancel</Button>
-				<Button variant="primary" size="sm" type="submit" disabled={creatingProject || !newProjectName.trim()}>
+				<Button variant="ghost" size="sm" onclick={() => (showNewProjectModal = false)}
+					>Cancel</Button
+				>
+				<Button
+					variant="primary"
+					size="sm"
+					type="submit"
+					disabled={creatingProject || !newProjectName.trim()}
+				>
 					{creatingProject ? 'Creating...' : 'Create Project'}
 				</Button>
 			</div>

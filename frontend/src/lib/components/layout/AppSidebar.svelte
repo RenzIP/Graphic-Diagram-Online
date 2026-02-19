@@ -22,7 +22,7 @@
 					.join('')
 					.toUpperCase()
 					.slice(0, 2)
-			: user?.email?.slice(0, 2).toUpperCase() ?? '??'
+			: (user?.email?.slice(0, 2).toUpperCase() ?? '??')
 	);
 
 	onMount(async () => {
@@ -43,7 +43,11 @@
 	const wsColors = ['indigo', 'orange', 'emerald', 'pink', 'cyan', 'amber'];
 </script>
 
-<svelte:window onclick={() => { if (showUserMenu) showUserMenu = false; }} />
+<svelte:window
+	onclick={() => {
+		if (showUserMenu) showUserMenu = false;
+	}}
+/>
 
 <aside class="flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900">
 	<!-- Header -->
@@ -169,7 +173,9 @@
 							class="w-full justify-start pl-3 text-sm"
 							href={`/workspace/${ws.id}`}
 						>
-							<span class={`mr-3 h-2 w-2 shrink-0 rounded-full bg-${wsColors[i % wsColors.length]}-500`}></span>
+							<span
+								class={`mr-3 h-2 w-2 shrink-0 rounded-full bg-${wsColors[i % wsColors.length]}-500`}
+							></span>
 							<span class="truncate">{ws.name}</span>
 						</Button>
 					{/each}
@@ -194,7 +200,12 @@
 						{user?.email || ''}
 					</div>
 				</div>
-				<svg class="h-4 w-4 shrink-0 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<svg
+					class="h-4 w-4 shrink-0 text-slate-500"
+					fill="none"
+					viewBox="0 0 24 24"
+					stroke="currentColor"
+				>
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -216,8 +227,18 @@
 						class="flex items-center gap-2 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700 hover:text-white"
 					>
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+							/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
 						</svg>
 						Settings
 					</a>
@@ -227,7 +248,12 @@
 						onclick={handleLogout}
 					>
 						<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+							/>
 						</svg>
 						Sign out
 					</button>

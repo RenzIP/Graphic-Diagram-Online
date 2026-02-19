@@ -175,16 +175,18 @@
 					{
 						const id = $page.params.id;
 						if (id) {
-							performSave(id).then(() => {
-								if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
-									(window as any).__gradiol_toast('Document saved', 'success');
-								}
-							}).catch((err) => {
-								console.error(err);
-								if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
-									(window as any).__gradiol_toast('Failed to save', 'error');
-								}
-							});
+							performSave(id)
+								.then(() => {
+									if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
+										(window as any).__gradiol_toast('Document saved', 'success');
+									}
+								})
+								.catch((err) => {
+									console.error(err);
+									if (typeof window !== 'undefined' && (window as any).__gradiol_toast) {
+										(window as any).__gradiol_toast('Failed to save', 'error');
+									}
+								});
 						}
 					}
 					break;
@@ -222,7 +224,15 @@
 
 <div class="flex h-screen w-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
 	<!-- Top Toolbar -->
-	<Toolbar title={diagramTitle} {diagramType} onTitleChange={handleTitleChange} {svgRef} {isDirty} {isSaving} {lastSavedAt} />
+	<Toolbar
+		title={diagramTitle}
+		{diagramType}
+		onTitleChange={handleTitleChange}
+		{svgRef}
+		{isDirty}
+		{isSaving}
+		{lastSavedAt}
+	/>
 
 	<div class="relative flex flex-1 overflow-hidden">
 		<!-- Left Sidebar (Shape Palette) -->

@@ -29,8 +29,7 @@
 				// Try exchanging the code from URL params
 				const code = $page.url.searchParams.get('code');
 				if (code) {
-					const { data, error: exchangeError } =
-						await supabase.auth.exchangeCodeForSession(code);
+					const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 					if (exchangeError) throw new Error(exchangeError.message);
 					if (!data.session) throw new Error('No session returned after code exchange');
 

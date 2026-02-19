@@ -28,7 +28,9 @@
 	let creatingDiagram = $state(false);
 
 	const typeColors: Record<string, string> = {
-		flowchart: 'indigo', erd: 'purple', usecase: 'cyan'
+		flowchart: 'indigo',
+		erd: 'purple',
+		usecase: 'cyan'
 	};
 
 	function timeAgo(dateStr: string): string {
@@ -225,52 +227,72 @@
 
 				{#if loading}
 					<div class="flex items-center justify-center py-12">
-						<div class="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500"></div>
+						<div
+							class="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500"
+						></div>
 						<span class="ml-3 text-sm text-slate-500">Loading diagrams...</span>
 					</div>
 				{:else if filteredDocs.length === 0}
-					<div class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 py-16">
-						<svg class="mb-4 h-12 w-12 text-slate-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+					<div
+						class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-800 py-16"
+					>
+						<svg
+							class="mb-4 h-12 w-12 text-slate-700"
+							fill="none"
+							viewBox="0 0 24 24"
+							stroke="currentColor"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
 						</svg>
-						<p class="text-sm text-slate-500">{searchQuery ? 'No diagrams match your search' : 'No diagrams yet. Create your first one above!'}</p>
+						<p class="text-sm text-slate-500">
+							{searchQuery
+								? 'No diagrams match your search'
+								: 'No diagrams yet. Create your first one above!'}
+						</p>
 					</div>
 				{:else}
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					{#each filteredDocs as doc}
-						<Card
-							class="group relative cursor-pointer transition-colors hover:border-slate-600"
-							onclick={() => (window.location.href = `/editor/${doc.id}`)}
-						>
-							<div
-								class="relative aspect-video overflow-hidden border-b border-slate-800 bg-slate-900"
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+						{#each filteredDocs as doc}
+							<Card
+								class="group relative cursor-pointer transition-colors hover:border-slate-600"
+								onclick={() => (window.location.href = `/editor/${doc.id}`)}
 							>
 								<div
-									class={`absolute inset-0 bg-${typeColors[doc.diagram_type] || 'slate'}-500/5 group-hover:bg-${typeColors[doc.diagram_type] || 'slate'}-500/10 transition-colors`}
-								></div>
-							</div>
-							<div class="p-4">
-								<div class="flex items-start justify-between">
-									<div class="min-w-0 flex-1">
-										<h3
-											class="truncate font-medium text-slate-200 transition-colors group-hover:text-indigo-400"
-										>
-											{doc.title}
-										</h3>
-										<p class="mt-1 text-xs text-slate-500">
-											{doc.workspace_name}{doc.project_name ? ` / ${doc.project_name}` : ''} · {timeAgo(doc.updated_at)}
-										</p>
-									</div>
-									<span
-										class="ml-2 shrink-0 rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-400 uppercase"
-									>
-										{doc.diagram_type}
-									</span>
+									class="relative aspect-video overflow-hidden border-b border-slate-800 bg-slate-900"
+								>
+									<div
+										class={`absolute inset-0 bg-${typeColors[doc.diagram_type] || 'slate'}-500/5 group-hover:bg-${typeColors[doc.diagram_type] || 'slate'}-500/10 transition-colors`}
+									></div>
 								</div>
-							</div>
-						</Card>
-					{/each}
-				</div>
+								<div class="p-4">
+									<div class="flex items-start justify-between">
+										<div class="min-w-0 flex-1">
+											<h3
+												class="truncate font-medium text-slate-200 transition-colors group-hover:text-indigo-400"
+											>
+												{doc.title}
+											</h3>
+											<p class="mt-1 text-xs text-slate-500">
+												{doc.workspace_name}{doc.project_name ? ` / ${doc.project_name}` : ''} · {timeAgo(
+													doc.updated_at
+												)}
+											</p>
+										</div>
+										<span
+											class="ml-2 shrink-0 rounded border border-slate-700 bg-slate-800 px-2 py-0.5 text-[10px] font-medium tracking-wide text-slate-400 uppercase"
+										>
+											{doc.diagram_type}
+										</span>
+									</div>
+								</div>
+							</Card>
+						{/each}
+					</div>
 				{/if}
 			</section>
 		</div>
@@ -284,7 +306,13 @@
 		{#if workspaces.length === 0}
 			<p class="mb-4 text-sm text-slate-400">
 				You need a workspace first.
-				<button class="text-indigo-400 hover:text-indigo-300" onclick={() => { showNewDiagramModal = false; showNewWorkspaceModal = true; }}>
+				<button
+					class="text-indigo-400 hover:text-indigo-300"
+					onclick={() => {
+						showNewDiagramModal = false;
+						showNewWorkspaceModal = true;
+					}}
+				>
 					Create one
 				</button>
 			</p>
@@ -327,10 +355,17 @@
 <Modal bind:open={showNewWorkspaceModal}>
 	<div class="p-6">
 		<h3 class="mb-4 text-lg font-semibold text-white">Create Workspace</h3>
-		<form class="space-y-3" onsubmit={(e) => { e.preventDefault(); createWorkspace(); }}>
+		<form
+			class="space-y-3"
+			onsubmit={(e) => {
+				e.preventDefault();
+				createWorkspace();
+			}}
+		>
 			<Input label="Workspace Name" placeholder="My Workspace" bind:value={newWsName} />
 			<div>
-				<label for="ws-desc" class="mb-1 block text-sm text-slate-400">Description (optional)</label>
+				<label for="ws-desc" class="mb-1 block text-sm text-slate-400">Description (optional)</label
+				>
 				<textarea
 					id="ws-desc"
 					bind:value={newWsDescription}
@@ -340,8 +375,15 @@
 				></textarea>
 			</div>
 			<div class="flex justify-end gap-2 pt-2">
-				<Button variant="ghost" size="sm" onclick={() => (showNewWorkspaceModal = false)}>Cancel</Button>
-				<Button variant="primary" size="sm" type="submit" disabled={creatingWs || !newWsName.trim()}>
+				<Button variant="ghost" size="sm" onclick={() => (showNewWorkspaceModal = false)}
+					>Cancel</Button
+				>
+				<Button
+					variant="primary"
+					size="sm"
+					type="submit"
+					disabled={creatingWs || !newWsName.trim()}
+				>
 					{creatingWs ? 'Creating...' : 'Create'}
 				</Button>
 			</div>
