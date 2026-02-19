@@ -80,7 +80,6 @@ jobs:
             --timeout=60s \
             --min-instances=0 \
             --max-instances=10 \
-            --set-build-env-vars="GOOGLE_FUNCTION_SOURCE=gcf" \
             --set-env-vars="\
               ENV=production,\
               DATABASE_URL=${{ secrets.DATABASE_URL }},\
