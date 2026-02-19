@@ -49,13 +49,16 @@
 
 	async function registerWithBackend(accessToken: string, refreshToken: string) {
 		// POST to backend /api/auth/callback to create/update user profile
-		const result = await authApi.callback({
-			access_token: accessToken,
-			refresh_token: refreshToken
-		});
+		// Pass Supabase access_token explicitly as Authorization header
+		// since it's not yet stored in localStorage at this point
+		const result = await authApi.callback(
+			{ access_token: accessToken, refresh_token: refreshToken },
+			accessToken
+		);
 
 		// Update global auth state (handles localStorage + cookie + reactive state)
-		setAuthUser(result.user, result.token);
+		// Use the Supabase access_token as our auth token
+		setAuthUser(result.user, result.token || accessToken);
 
 		// Navigate to the target page
 		await goto(redirectTo, { replaceState: true });

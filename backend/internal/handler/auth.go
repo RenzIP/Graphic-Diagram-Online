@@ -20,12 +20,21 @@ func NewAuthHandler(authSvc *service.AuthService) *AuthHandler {
 
 // Callback handles POST /api/auth/callback.
 // Receives the Supabase tokens from frontend, upserts the user profile,
-// and returns the user data.
+// and returns the user data + token.
 func (h *AuthHandler) Callback(c *fiber.Ctx) error {
 	// The auth callback is called after frontend completes OAuth.
 	// The JWT is already validated by the auth middleware at this point.
 	userID := middleware.GetUserID(c)
 	email, _ := c.Locals("email").(string)
+
+	// Parse request body to get the access_token
+	var body struct {
+		AccessToken  string `json:"access_token"`
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := c.BodyParser(&body); err != nil {
+		return pkg.WriteError(c, pkg.BadRequest("Invalid request body"))
+	}
 
 	// Upsert profile (full_name and avatar_url may come from JWT metadata later)
 	if appErr := h.authSvc.UpsertProfile(c.Context(), userID, nil, nil); appErr != nil {
@@ -39,7 +48,8 @@ func (h *AuthHandler) Callback(c *fiber.Ctx) error {
 	profile.Email = email
 
 	return pkg.WriteSuccess(c, fiber.StatusOK, fiber.Map{
-		"user": profile,
+		"user":  profile,
+		"token": body.AccessToken,
 	})
 }
 
