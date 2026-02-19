@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -35,6 +36,7 @@ func Auth(jwtSecret string) fiber.Handler {
 			return []byte(jwtSecret), nil
 		})
 		if err != nil || !token.Valid {
+			log.Printf("[Auth] JWT validation failed: %v (secret length: %d, token prefix: %.20s...)", err, len(jwtSecret), tokenStr)
 			return pkg.WriteError(c, pkg.ErrUnauthorized.WithMessage("invalid or expired token"))
 		}
 
