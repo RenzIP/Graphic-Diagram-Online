@@ -33,7 +33,7 @@ func Setup(app *fiber.App, cfg *config.Config, h Handlers) {
 	api.Get("/health", h.Health.Check)
 
 	// --- Protected endpoints (auth required) ---
-	protected := api.Group("", middleware.Auth(cfg.SupabaseJWTSecret))
+	protected := api.Group("", middleware.Auth(cfg.SupabaseJWTSecret, cfg.SupabaseURL))
 
 	// Auth
 	protected.Post("/auth/callback", h.Auth.Callback)
