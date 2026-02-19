@@ -96,13 +96,19 @@ jobs:
             --region=${{ secrets.GCP_REGION }} \
             --format='value(serviceConfig.uri)')
           echo "🚀 Backend deployed to: $FUNCTION_URL"
-          # Health check
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$FUNCTION_URL/api/health")
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "❌ Health check failed (HTTP $HTTP_CODE)"
-            exit 1
-          fi
-          echo "✅ Health check passed"
+          # Health check with retry (cold start can take 10-30s)
+          for i in 1 2 3 4 5; do
+            echo "Attempt $i: checking $FUNCTION_URL/api/health ..."
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "$FUNCTION_URL/api/health")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            echo "⏳ Got HTTP $HTTP_CODE, retrying in 10s..."
+            sleep 10
+          done
+          echo "❌ Health check failed after 5 attempts"
+          exit 1
 
   # ─────────────────────────────────────────────
   # Frontend → Vercel
