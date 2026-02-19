@@ -5,18 +5,26 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
 	"github.com/uptrace/bun/extra/bundebug"
-
-	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 func Connect(databaseURL string) (*bun.DB, error) {
-	sqldb, err := sql.Open("pgx", databaseURL)
+	// Parse pgx config from DATABASE_URL
+	config, err := pgx.ParseConfig(databaseURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to open database: %w", err)
+		return nil, fmt.Errorf("failed to parse database URL: %w", err)
 	}
+
+	// Use simple protocol — required for Supabase Pooler (Supavisor transaction mode)
+	// which does not support prepared statements (extended query protocol).
+	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	// Register pgx connector with database/sql
+	sqldb := stdlib.OpenDB(*config)
 
 	// Connection pool settings — tuned for serverless (GCF)
 	sqldb.SetMaxOpenConns(5)
