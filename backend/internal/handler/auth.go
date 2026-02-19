@@ -33,7 +33,7 @@ func (h *AuthHandler) Callback(c *fiber.Ctx) error {
 		RefreshToken string `json:"refresh_token"`
 	}
 	if err := c.BodyParser(&body); err != nil {
-		return pkg.WriteError(c, pkg.BadRequest("Invalid request body"))
+		return handleError(c, pkg.ErrBadRequest.WithMessage("Invalid request body"))
 	}
 
 	// Upsert profile (full_name and avatar_url may come from JWT metadata later)
