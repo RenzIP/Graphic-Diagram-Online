@@ -60,8 +60,11 @@
 		// Use the Supabase access_token as our auth token
 		setAuthUser(result.user, result.token || accessToken);
 
-		// Navigate to the target page
-		await goto(redirectTo, { replaceState: true });
+		// Use full page navigation (not SvelteKit goto) so the browser
+		// sends the newly-set auth_token cookie on the next server request.
+		// SvelteKit's goto() can trigger server-side hooks before the
+		// client-set cookie is available in the request headers.
+		window.location.href = redirectTo;
 	}
 </script>
 
