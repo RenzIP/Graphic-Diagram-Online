@@ -7,7 +7,7 @@ GraDiOl (Graphic Diagram Online) is a hybrid diagram editor: bidirectional DSL t
 - **Frontend:** SvelteKit 2 + Svelte 5 + TypeScript + TailwindCSS v4 — in `frontend/`
 - **Backend:** Go 1.25 + Fiber v2 + Bun ORM + PostgreSQL (Supabase) — in `backend/`
 - **Auth:** Supabase Auth (Google OAuth + Magic Link), JWT-based
-- **Deploy:** Frontend → Vercel, Backend → Google Cloud Run
+- **Deploy:** Frontend → Vercel, Backend → Google Cloud Functions (Gen 2)
 
 ## Architecture
 
