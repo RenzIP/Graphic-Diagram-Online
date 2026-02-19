@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"log"
 
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
@@ -29,12 +30,14 @@ func (r *WorkspaceRepo) FindByMember(ctx context.Context, userID uuid.UUID, limi
 		Column("wm.workspace_id").
 		Where("wm.user_id = ?", userID)
 
-	q := r.db.NewSelect().Model(&workspaces).
+	total, err := r.db.NewSelect().Model(&workspaces).
 		Where("w.id IN (?)", subq).
-		OrderExpr("w.updated_at DESC")
-
-	total, err := applyPagination(q, limit, offset).ScanAndCount(ctx)
+		OrderExpr("w.updated_at DESC").
+		Limit(limit).
+		Offset(offset).
+		ScanAndCount(ctx)
 	if err != nil {
+		log.Printf("[WorkspaceRepo.FindByMember] DB error: %v", err)
 		return nil, 0, pkg.ErrInternal.WithMessage("failed to list workspaces").WithDetails(err.Error())
 	}
 	return workspaces, total, nil
@@ -138,6 +141,7 @@ func (r *WorkspaceRepo) InsertWithOwner(ctx context.Context, ws *model.Workspace
 		return nil
 	})
 	if err != nil {
+		log.Printf("[WorkspaceRepo.InsertWithOwner] TX error: %v", err)
 		return pkg.ErrInternal.WithMessage("failed to create workspace with owner").WithDetails(err.Error())
 	}
 	return nil

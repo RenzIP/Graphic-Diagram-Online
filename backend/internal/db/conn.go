@@ -3,6 +3,7 @@ package db
 import (
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/uptrace/bun"
 	"github.com/uptrace/bun/dialect/pgdialect"
@@ -16,6 +17,12 @@ func Connect(databaseURL string) (*bun.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
+
+	// Connection pool settings — tuned for serverless (GCF)
+	sqldb.SetMaxOpenConns(5)
+	sqldb.SetMaxIdleConns(2)
+	sqldb.SetConnMaxLifetime(5 * time.Minute)
+	sqldb.SetConnMaxIdleTime(1 * time.Minute)
 
 	if err := sqldb.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping database: %w", err)
