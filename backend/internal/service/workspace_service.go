@@ -6,10 +6,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/renzip/GraDiOl/internal/dto"
-	"github.com/renzip/GraDiOl/internal/model"
-	"github.com/renzip/GraDiOl/internal/pkg"
-	"github.com/renzip/GraDiOl/internal/repository"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/dto"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/repository"
 )
 
 // WorkspaceService handles workspace business logic with authorization.

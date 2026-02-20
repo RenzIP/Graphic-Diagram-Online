@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/renzip/GraDiOl/internal/app"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/app"
 )
 
 func main() {

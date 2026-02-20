@@ -6,7 +6,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/renzip/GraDiOl/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
 // Recover returns a middleware that catches panics and returns a 500 JSON error.

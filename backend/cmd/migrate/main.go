@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/renzip/GraDiOl/internal/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 )

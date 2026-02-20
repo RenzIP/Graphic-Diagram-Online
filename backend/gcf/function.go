@@ -28,7 +28,7 @@ import (
 	"github.com/GoogleCloudPlatform/functions-framework-go/functions"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 
-	"github.com/renzip/GraDiOl/internal/app"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/app"
 )
 
 var (

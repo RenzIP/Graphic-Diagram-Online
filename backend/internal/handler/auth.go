@@ -3,9 +3,9 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/renzip/GraDiOl/internal/middleware"
-	"github.com/renzip/GraDiOl/internal/pkg"
-	"github.com/renzip/GraDiOl/internal/service"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
 )
 
 // AuthHandler handles auth-related endpoints.

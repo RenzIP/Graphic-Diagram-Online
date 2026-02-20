@@ -6,10 +6,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"github.com/renzip/GraDiOl/internal/dto"
-	"github.com/renzip/GraDiOl/internal/middleware"
-	"github.com/renzip/GraDiOl/internal/pkg"
-	"github.com/renzip/GraDiOl/internal/service"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/dto"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
 )
 
 // DocumentHandler handles document CRUD and recent endpoints.

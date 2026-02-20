@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/uptrace/bun"
 
-	"github.com/renzip/GraDiOl/internal/model"
-	"github.com/renzip/GraDiOl/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
 // DocumentRepo handles documents table operations.

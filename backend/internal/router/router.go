@@ -3,9 +3,9 @@ package router
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/renzip/GraDiOl/internal/config"
-	"github.com/renzip/GraDiOl/internal/handler"
-	"github.com/renzip/GraDiOl/internal/middleware"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/handler"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
 )
 
 // Handlers groups all handler structs for route registration.

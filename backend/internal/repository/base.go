@@ -7,7 +7,7 @@ import (
 
 	"github.com/uptrace/bun"
 
-	"github.com/renzip/GraDiOl/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
 // applyPagination adds LIMIT/OFFSET to a Bun SelectQuery.

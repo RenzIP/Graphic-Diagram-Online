@@ -2,8 +2,8 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/renzip/GraDiOl/internal/domain/document"
-	"github.com/renzip/GraDiOl/internal/ws"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/domain/document"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/ws"
 )
 
 func RegisterRoutes(app *fiber.App, svc *document.Service, hub *ws.Hub) {

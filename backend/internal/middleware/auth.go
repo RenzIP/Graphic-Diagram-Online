@@ -16,7 +16,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 
-	"github.com/renzip/GraDiOl/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
 // jwksCache caches the ECDSA public keys fetched from Supabase JWKS endpoint.

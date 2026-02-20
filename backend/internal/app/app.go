@@ -9,12 +9,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/uptrace/bun"
 
-	"github.com/renzip/GraDiOl/internal/config"
-	"github.com/renzip/GraDiOl/internal/db"
-	"github.com/renzip/GraDiOl/internal/handler"
-	"github.com/renzip/GraDiOl/internal/repository"
-	"github.com/renzip/GraDiOl/internal/router"
-	"github.com/renzip/GraDiOl/internal/service"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/db"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/handler"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/repository"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/router"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
 )
 
 // Instance holds the initialized Fiber app and DB connection.

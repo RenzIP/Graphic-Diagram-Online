@@ -2,7 +2,7 @@ package http
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"github.com/renzip/GraDiOl/internal/domain/document"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/domain/document"
 )
 
 type WorkspaceHandler struct {
