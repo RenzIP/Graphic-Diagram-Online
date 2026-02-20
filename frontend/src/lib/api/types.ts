@@ -39,16 +39,6 @@ export interface AuthUser {
 	avatar_url: string | null;
 }
 
-export interface AuthCallbackRequest {
-	access_token: string;
-	refresh_token: string;
-}
-
-export interface AuthCallbackResponse {
-	token: string;
-	user: AuthUser;
-}
-
 // ── Workspace ───────────────────────────────────────────
 
 export interface Workspace {

@@ -1,14 +1,11 @@
 /**
  * GraDiOl — Auth Store
- * Reactive auth state management with Supabase onAuthStateChange listener.
- * Based on auth-implementation-patterns skill:
+ * Reactive auth state management.
  * - Centralized auth state (user, token, loading)
- * - Auto-refresh via Supabase listener
  * - Secure logout (clear all tokens + cookies)
  * - Reactive across all components
  */
 import { writable, derived } from 'svelte/store';
-import { supabase } from '$lib/supabase';
 import { authApi } from '$lib/api/auth';
 import type { AuthUser } from '$lib/api/types';
 
@@ -41,57 +38,17 @@ export const isAuthLoading = derived(authState, ($s) => $s.isLoading);
 // ── Auth actions ────────────────────────────────────────
 
 /**
- * Initialize auth listener.
- * Call once from root layout. Listens for Supabase auth state changes
- * and syncs with the backend JWT token in localStorage/cookie.
+ * Initialize auth on app startup.
+ * If a stored token exists, fetch the user profile from the backend.
+ * Call once from root layout.
  */
-export function initAuthListener(): () => void {
-	// Try to load user from existing token first
+export function initAuth(): void {
 	const existingToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
 	if (existingToken) {
-		// We have a stored token — try to fetch the user profile
 		loadUserProfile();
 	} else {
 		authState.update((s) => ({ ...s, isLoading: false }));
 	}
-
-	// Listen for Supabase auth state changes (sign in, sign out, token refresh)
-	const {
-		data: { subscription }
-	} = supabase.auth.onAuthStateChange(async (event, session) => {
-		if (event === 'SIGNED_OUT') {
-			clearAuthData();
-			authState.set({
-				user: null,
-				isAuthenticated: false,
-				isLoading: false,
-				error: null
-			});
-		} else if (event === 'TOKEN_REFRESHED' && session) {
-			// Supabase refreshed the token — re-sync with backend
-			try {
-				const result = await authApi.callback(
-					{
-						access_token: session.access_token,
-						refresh_token: session.refresh_token
-					},
-					session.access_token
-				);
-				storeAuthData(result.token);
-				authState.update((s) => ({
-					...s,
-					user: result.user,
-					isAuthenticated: true,
-					error: null
-				}));
-			} catch {
-				// Token refresh to backend failed — don't log out, keep existing token
-				console.warn('[Auth] Backend token refresh failed, keeping existing token');
-			}
-		}
-	});
-
-	return () => subscription.unsubscribe();
 }
 
 /**
@@ -119,7 +76,7 @@ async function loadUserProfile(): Promise<void> {
 }
 
 /**
- * Set auth state after successful login/callback.
+ * Set auth state after successful OAuth callback.
  * Called from the auth callback page.
  */
 export function setAuthUser(user: AuthUser, token: string): void {
@@ -133,15 +90,17 @@ export function setAuthUser(user: AuthUser, token: string): void {
 }
 
 /**
- * Logout — clear everything and sign out of Supabase.
+ * Set auth token and load profile (used when we get a token from OAuth redirect).
+ */
+export async function setAuthToken(token: string): Promise<void> {
+	storeAuthData(token);
+	await loadUserProfile();
+}
+
+/**
+ * Logout — clear everything.
  */
 export async function logout(): Promise<void> {
-	authState.update((s) => ({ ...s, isLoading: true }));
-	try {
-		await supabase.auth.signOut();
-	} catch {
-		// Even if Supabase signout fails, clear local state
-	}
 	clearAuthData();
 	authState.set({
 		user: null,

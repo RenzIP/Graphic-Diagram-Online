@@ -1,16 +1,11 @@
 <script lang="ts">
-	import { onDestroy } from 'svelte';
-	import { initAuthListener } from '$lib/stores/auth';
+	import { initAuth } from '$lib/stores/auth';
 
 	let { children } = $props();
 
-	// Initialize auth listener once for all (app) routes.
-	// This sets up onAuthStateChange and loads user profile from stored token.
-	const unsubscribe = initAuthListener();
-
-	onDestroy(() => {
-		unsubscribe();
-	});
+	// Initialize auth once for all (app) routes.
+	// This loads user profile from stored token if available.
+	initAuth();
 </script>
 
 {@render children()}

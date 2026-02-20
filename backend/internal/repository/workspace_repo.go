@@ -5,49 +5,87 @@ import (
 	"log"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
-// WorkspaceRepo handles workspaces and workspace_members table operations.
+// WorkspaceRepo handles workspaces and workspace_members collection operations.
 type WorkspaceRepo struct {
-	db *bun.DB
+	db        *mongo.Database
+	wsCol     *mongo.Collection
+	memberCol *mongo.Collection
 }
 
 // NewWorkspaceRepo creates a new WorkspaceRepo.
-func NewWorkspaceRepo(db *bun.DB) *WorkspaceRepo {
-	return &WorkspaceRepo{db: db}
+func NewWorkspaceRepo(db *mongo.Database) *WorkspaceRepo {
+	return &WorkspaceRepo{
+		db:        db,
+		wsCol:     db.Collection("workspaces"),
+		memberCol: db.Collection("workspace_members"),
+	}
 }
 
 // FindByMember returns paginated workspaces where the user is a member.
 func (r *WorkspaceRepo) FindByMember(ctx context.Context, userID uuid.UUID, limit, offset int) ([]model.Workspace, int, *pkg.AppError) {
-	var workspaces []model.Workspace
-
-	subq := r.db.NewSelect().
-		TableExpr("workspace_members AS wm").
-		Column("wm.workspace_id").
-		Where("wm.user_id = ?", userID)
-
-	total, err := r.db.NewSelect().Model(&workspaces).
-		Where("w.id IN (?)", subq).
-		OrderExpr("w.updated_at DESC").
-		Limit(limit).
-		Offset(offset).
-		ScanAndCount(ctx)
+	// Step 1: Get workspace IDs where user is a member
+	memberFilter := bson.M{"user_id": userID}
+	cursor, err := r.memberCol.Find(ctx, memberFilter)
 	if err != nil {
 		log.Printf("[WorkspaceRepo.FindByMember] DB error: %v", err)
 		return nil, 0, pkg.ErrInternal.WithMessage("failed to list workspaces").WithDetails(err.Error())
 	}
-	return workspaces, total, nil
+	defer cursor.Close(ctx)
+
+	var members []model.WorkspaceMember
+	if err := cursor.All(ctx, &members); err != nil {
+		return nil, 0, pkg.ErrInternal.WithMessage("failed to decode members").WithDetails(err.Error())
+	}
+
+	wsIDs := make([]uuid.UUID, len(members))
+	for i, m := range members {
+		wsIDs[i] = m.WorkspaceID
+	}
+
+	if len(wsIDs) == 0 {
+		return []model.Workspace{}, 0, nil
+	}
+
+	// Step 2: Count total
+	wsFilter := bson.M{"_id": bson.M{"$in": wsIDs}}
+	total, err := r.wsCol.CountDocuments(ctx, wsFilter)
+	if err != nil {
+		return nil, 0, pkg.ErrInternal.WithMessage("failed to count workspaces").WithDetails(err.Error())
+	}
+
+	// Step 3: Fetch with pagination
+	opts := options.Find().
+		SetSort(bson.D{{Key: "updated_at", Value: -1}}).
+		SetLimit(int64(limit)).
+		SetSkip(int64(offset))
+
+	wsCursor, err := r.wsCol.Find(ctx, wsFilter, opts)
+	if err != nil {
+		return nil, 0, pkg.ErrInternal.WithMessage("failed to list workspaces").WithDetails(err.Error())
+	}
+	defer wsCursor.Close(ctx)
+
+	var workspaces []model.Workspace
+	if err := wsCursor.All(ctx, &workspaces); err != nil {
+		return nil, 0, pkg.ErrInternal.WithMessage("failed to decode workspaces").WithDetails(err.Error())
+	}
+
+	return workspaces, int(total), nil
 }
 
 // FindByID returns a workspace by ID.
 func (r *WorkspaceRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Workspace, *pkg.AppError) {
 	ws := new(model.Workspace)
-	err := r.db.NewSelect().Model(ws).Where("w.id = ?", id).Scan(ctx)
-	if appErr := handleQueryError(err, "workspace"); appErr != nil {
+	err := r.wsCol.FindOne(ctx, bson.M{"_id": id}).Decode(ws)
+	if appErr := handleMongoError(err, "workspace"); appErr != nil {
 		return nil, appErr
 	}
 	return ws, nil
@@ -56,8 +94,8 @@ func (r *WorkspaceRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.Work
 // FindBySlug returns a workspace by its URL slug.
 func (r *WorkspaceRepo) FindBySlug(ctx context.Context, slug string) (*model.Workspace, *pkg.AppError) {
 	ws := new(model.Workspace)
-	err := r.db.NewSelect().Model(ws).Where("w.slug = ?", slug).Scan(ctx)
-	if appErr := handleQueryError(err, "workspace"); appErr != nil {
+	err := r.wsCol.FindOne(ctx, bson.M{"slug": slug}).Decode(ws)
+	if appErr := handleMongoError(err, "workspace"); appErr != nil {
 		return nil, appErr
 	}
 	return ws, nil
@@ -65,7 +103,7 @@ func (r *WorkspaceRepo) FindBySlug(ctx context.Context, slug string) (*model.Wor
 
 // Insert creates a new workspace.
 func (r *WorkspaceRepo) Insert(ctx context.Context, ws *model.Workspace) *pkg.AppError {
-	_, err := r.db.NewInsert().Model(ws).Exec(ctx)
+	_, err := r.wsCol.InsertOne(ctx, ws)
 	if err != nil {
 		return pkg.ErrInternal.WithMessage("failed to create workspace").WithDetails(err.Error())
 	}
@@ -74,16 +112,19 @@ func (r *WorkspaceRepo) Insert(ctx context.Context, ws *model.Workspace) *pkg.Ap
 
 // Update updates workspace fields.
 func (r *WorkspaceRepo) Update(ctx context.Context, ws *model.Workspace) *pkg.AppError {
-	_, err := r.db.NewUpdate().Model(ws).WherePK().Exec(ctx)
+	filter := bson.M{"_id": ws.ID}
+	update := bson.M{"$set": ws}
+	_, err := r.wsCol.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return pkg.ErrInternal.WithMessage("failed to update workspace").WithDetails(err.Error())
 	}
 	return nil
 }
 
-// Delete removes a workspace by ID (CASCADE deletes projects/documents).
+// Delete removes a workspace by ID.
+// Note: CASCADE deletes for projects/documents should be handled at the application level.
 func (r *WorkspaceRepo) Delete(ctx context.Context, id uuid.UUID) *pkg.AppError {
-	_, err := r.db.NewDelete().Model((*model.Workspace)(nil)).Where("id = ?", id).Exec(ctx)
+	_, err := r.wsCol.DeleteOne(ctx, bson.M{"_id": id})
 	if err != nil {
 		return pkg.ErrInternal.WithMessage("failed to delete workspace").WithDetails(err.Error())
 	}
@@ -94,7 +135,7 @@ func (r *WorkspaceRepo) Delete(ctx context.Context, id uuid.UUID) *pkg.AppError 
 
 // InsertMember adds a member to a workspace.
 func (r *WorkspaceRepo) InsertMember(ctx context.Context, m *model.WorkspaceMember) *pkg.AppError {
-	_, err := r.db.NewInsert().Model(m).Exec(ctx)
+	_, err := r.memberCol.InsertOne(ctx, m)
 	if err != nil {
 		return pkg.ErrInternal.WithMessage("failed to add workspace member").WithDetails(err.Error())
 	}
@@ -104,11 +145,9 @@ func (r *WorkspaceRepo) InsertMember(ctx context.Context, m *model.WorkspaceMemb
 // GetMemberRole returns the role of a user in a workspace, or empty string if not a member.
 func (r *WorkspaceRepo) GetMemberRole(ctx context.Context, workspaceID, userID uuid.UUID) (string, *pkg.AppError) {
 	member := new(model.WorkspaceMember)
-	err := r.db.NewSelect().Model(member).
-		Where("wm.workspace_id = ?", workspaceID).
-		Where("wm.user_id = ?", userID).
-		Scan(ctx)
-	if appErr := handleQueryError(err, "membership"); appErr != nil {
+	filter := bson.M{"workspace_id": workspaceID, "user_id": userID}
+	err := r.memberCol.FindOne(ctx, filter).Decode(member)
+	if appErr := handleMongoError(err, "membership"); appErr != nil {
 		if appErr.Code == "NOT_FOUND" {
 			return "", nil // not a member — no error, just empty role
 		}
@@ -119,26 +158,23 @@ func (r *WorkspaceRepo) GetMemberRole(ctx context.Context, workspaceID, userID u
 
 // CountMembers returns the number of members in a workspace.
 func (r *WorkspaceRepo) CountMembers(ctx context.Context, workspaceID uuid.UUID) (int, *pkg.AppError) {
-	count, err := r.db.NewSelect().
-		Model((*model.WorkspaceMember)(nil)).
-		Where("workspace_id = ?", workspaceID).
-		Count(ctx)
+	count, err := r.memberCol.CountDocuments(ctx, bson.M{"workspace_id": workspaceID})
 	if err != nil {
 		return 0, pkg.ErrInternal.WithMessage("failed to count members").WithDetails(err.Error())
 	}
-	return count, nil
+	return int(count), nil
 }
 
 // InsertWithOwner creates a workspace and its owner membership in a single transaction.
 func (r *WorkspaceRepo) InsertWithOwner(ctx context.Context, ws *model.Workspace, member *model.WorkspaceMember) *pkg.AppError {
-	err := runInTx(ctx, r.db, func(tx bun.Tx) error {
-		if _, err := tx.NewInsert().Model(ws).Exec(ctx); err != nil {
-			return err
+	err := runInTx(ctx, r.db, func(sessCtx context.Context) (interface{}, error) {
+		if _, err := r.wsCol.InsertOne(sessCtx, ws); err != nil {
+			return nil, err
 		}
-		if _, err := tx.NewInsert().Model(member).Exec(ctx); err != nil {
-			return err
+		if _, err := r.memberCol.InsertOne(sessCtx, member); err != nil {
+			return nil, err
 		}
-		return nil
+		return nil, nil
 	})
 	if err != nil {
 		log.Printf("[WorkspaceRepo.InsertWithOwner] TX error: %v", err)

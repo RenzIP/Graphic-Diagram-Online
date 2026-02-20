@@ -1,7 +1,7 @@
 /**
  * GraDiOl — Server Hooks
  * Route guard: redirect unauthenticated users to /login
- * Session handling via Supabase cookie + localStorage token
+ * Session handling via JWT cookie + localStorage token
  */
 import { redirect, type Handle } from '@sveltejs/kit';
 

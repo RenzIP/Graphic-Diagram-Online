@@ -1,10 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { supabase } from '$lib/supabase';
-	import { authApi } from '$lib/api/auth';
-	import { setAuthUser } from '$lib/stores/auth';
+	import { setAuthToken } from '$lib/stores/auth';
 
 	let status = $state<'loading' | 'error'>('loading');
 	let errorMessage = $state('');
@@ -14,58 +11,25 @@
 
 	onMount(async () => {
 		try {
-			// Supabase PKCE: the URL contains ?code=... which Supabase auto-detects
-			// because we set detectSessionInUrl: true in the client config.
-			const {
-				data: { session },
-				error: sessionError
-			} = await supabase.auth.getSession();
+			// Backend OAuth redirects here with ?token=... in the URL
+			const token = $page.url.searchParams.get('token');
 
-			if (sessionError) {
-				throw new Error(sessionError.message);
+			if (!token) {
+				const error = $page.url.searchParams.get('error');
+				throw new Error(error || 'No authentication token found in URL');
 			}
 
-			if (!session) {
-				// Try exchanging the code from URL params
-				const code = $page.url.searchParams.get('code');
-				if (code) {
-					const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-					if (exchangeError) throw new Error(exchangeError.message);
-					if (!data.session) throw new Error('No session returned after code exchange');
+			// Store the token and load user profile from backend
+			await setAuthToken(token);
 
-					await registerWithBackend(data.session.access_token, data.session.refresh_token);
-				} else {
-					throw new Error('No authentication code found in URL');
-				}
-			} else {
-				await registerWithBackend(session.access_token, session.refresh_token);
-			}
+			// Full page navigation so the browser sends the newly-set auth_token cookie
+			window.location.href = redirectTo;
 		} catch (err: any) {
 			console.error('[Auth Callback] Error:', err);
 			status = 'error';
 			errorMessage = err?.message || 'Authentication failed';
 		}
 	});
-
-	async function registerWithBackend(accessToken: string, refreshToken: string) {
-		// POST to backend /api/auth/callback to create/update user profile
-		// Pass Supabase access_token explicitly as Authorization header
-		// since it's not yet stored in localStorage at this point
-		const result = await authApi.callback(
-			{ access_token: accessToken, refresh_token: refreshToken },
-			accessToken
-		);
-
-		// Update global auth state (handles localStorage + cookie + reactive state)
-		// Use the Supabase access_token as our auth token
-		setAuthUser(result.user, result.token || accessToken);
-
-		// Use full page navigation (not SvelteKit goto) so the browser
-		// sends the newly-set auth_token cookie on the next server request.
-		// SvelteKit's goto() can trigger server-side hooks before the
-		// client-set cookie is available in the request headers.
-		window.location.href = redirectTo;
-	}
 </script>
 
 <div

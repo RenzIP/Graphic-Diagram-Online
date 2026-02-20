@@ -4,9 +4,9 @@ declare global {
 	namespace App {
 		// interface Error {}
 		interface Locals {
-			/** Supabase access token (JWT) from cookie or header */
+			/** JWT access token from cookie or header */
 			accessToken?: string;
-			/** User ID extracted from Supabase JWT sub claim */
+			/** User ID extracted from JWT sub claim */
 			userId?: string;
 		}
 		// interface PageData {}

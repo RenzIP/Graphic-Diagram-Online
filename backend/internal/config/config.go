@@ -21,13 +21,20 @@ type Config struct {
 	Port string
 	Env  string // development | staging | production
 
-	// Database
-	DatabaseURL string
+	// MongoDB
+	MongoURI      string
+	MongoDatabase string
 
-	// Supabase Auth
-	SupabaseURL        string
-	SupabaseJWTSecret  string
-	SupabaseServiceKey string
+	// JWT (self-signed)
+	JWTSecret string
+
+	// OAuth — Google
+	GoogleClientID     string
+	GoogleClientSecret string
+
+	// OAuth — GitHub
+	GitHubClientID     string
+	GitHubClientSecret string
 
 	// Redis
 	RedisURL string
@@ -44,17 +51,20 @@ type Config struct {
 }
 
 // Load reads environment variables and returns a validated Config.
-// Panics if required variables (DATABASE_URL, SUPABASE_JWT_SECRET) are missing in production.
+// Panics if required variables are missing in production.
 func Load() *Config {
 	_ = godotenv.Load()
 
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		Env:                getEnv("ENV", "development"),
-		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/gradiol?sslmode=disable"),
-		SupabaseURL:        getEnv("SUPABASE_URL", ""),
-		SupabaseJWTSecret:  getEnv("SUPABASE_JWT_SECRET", ""),
-		SupabaseServiceKey: getEnv("SUPABASE_SERVICE_KEY", ""),
+		MongoURI:           getEnv("MONGODB_URI", "mongodb://localhost:27017"),
+		MongoDatabase:      getEnv("MONGODB_DATABASE", "gradiol"),
+		JWTSecret:          getEnv("JWT_SECRET", "dev-secret-change-me"),
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GitHubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
 		RateLimits: RateLimitConfig{
@@ -68,11 +78,11 @@ func Load() *Config {
 
 	// Fail fast in production if critical config is missing
 	if cfg.Env == "production" {
-		if cfg.SupabaseJWTSecret == "" {
-			log.Fatal("SUPABASE_JWT_SECRET is required in production")
+		if cfg.JWTSecret == "" || cfg.JWTSecret == "dev-secret-change-me" {
+			log.Fatal("JWT_SECRET is required in production (and must not be the default)")
 		}
-		if cfg.DatabaseURL == "" {
-			log.Fatal("DATABASE_URL is required in production")
+		if cfg.MongoURI == "" {
+			log.Fatal("MONGODB_URI is required in production")
 		}
 	}
 

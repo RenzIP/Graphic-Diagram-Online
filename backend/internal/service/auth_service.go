@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -29,18 +30,20 @@ func (s *AuthService) GetProfile(ctx context.Context, userID uuid.UUID) (*dto.Au
 	}
 	return &dto.AuthMeResp{
 		ID:        user.ID.String(),
-		Email:     "", // email comes from JWT claims, not DB
+		Email:     user.Email,
 		FullName:  user.FullName,
 		AvatarURL: user.AvatarURL,
 	}, nil
 }
 
-// UpsertProfile creates or updates a user profile (called during auth callback).
-func (s *AuthService) UpsertProfile(ctx context.Context, userID uuid.UUID, fullName, avatarURL *string) *pkg.AppError {
+// UpsertProfile creates or updates a user profile (called during OAuth callback).
+func (s *AuthService) UpsertProfile(ctx context.Context, userID uuid.UUID, email string, fullName, avatarURL *string) *pkg.AppError {
 	user := &model.UserProfile{
 		ID:        userID,
+		Email:     email,
 		FullName:  fullName,
 		AvatarURL: avatarURL,
+		CreatedAt: time.Now(),
 	}
 	return s.userRepo.Upsert(ctx, user)
 }

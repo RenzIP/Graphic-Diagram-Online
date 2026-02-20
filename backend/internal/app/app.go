@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/uptrace/bun"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/db"
@@ -20,7 +20,7 @@ import (
 // Instance holds the initialized Fiber app and DB connection.
 type Instance struct {
 	App *fiber.App
-	DB  *bun.DB
+	DB  *mongo.Database
 	Cfg *config.Config
 }
 
@@ -31,11 +31,11 @@ func New() *Instance {
 	cfg := config.Load()
 
 	// Connect to database
-	database, err := db.Connect(cfg.DatabaseURL)
+	database, err := db.Connect(cfg.MongoURI, cfg.MongoDatabase)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	log.Println("✓ Connected to PostgreSQL")
+	log.Println("✓ Connected to MongoDB")
 
 	// --- Repository layer ---
 	userRepo := repository.NewUserRepo(database)
@@ -52,7 +52,7 @@ func New() *Instance {
 	// --- Handler layer ---
 	handlers := router.Handlers{
 		Health:    handler.NewHealthHandler(),
-		Auth:      handler.NewAuthHandler(authSvc),
+		Auth:      handler.NewAuthHandler(authSvc, cfg),
 		Workspace: handler.NewWorkspaceHandler(wsSvc),
 		Project:   handler.NewProjectHandler(projSvc),
 		Document:  handler.NewDocumentHandler(docSvc),
@@ -77,7 +77,7 @@ func New() *Instance {
 // Close gracefully shuts down the application (closes DB, etc).
 func (inst *Instance) Close() {
 	if inst.DB != nil {
-		inst.DB.Close()
+		db.Disconnect(inst.DB)
 	}
 }
 

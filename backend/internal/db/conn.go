@@ -1,42 +1,38 @@
 package db
 
 import (
+	"context"
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/stdlib"
-	"github.com/uptrace/bun"
-	"github.com/uptrace/bun/dialect/pgdialect"
-	"github.com/uptrace/bun/extra/bundebug"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
-func Connect(databaseURL string) (*bun.DB, error) {
-	// Parse pgx config from DATABASE_URL
-	config, err := pgx.ParseConfig(databaseURL)
+// Connect establishes a connection to MongoDB and returns the database handle.
+func Connect(uri, dbName string) (*mongo.Database, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	clientOpts := options.Client().ApplyURI(uri)
+
+	client, err := mongo.Connect(clientOpts)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse database URL: %w", err)
+		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
 
-	// Use simple protocol — required for Supabase Pooler (Supavisor transaction mode)
-	// which does not support prepared statements (extended query protocol).
-	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
-
-	// Register pgx connector with database/sql
-	sqldb := stdlib.OpenDB(*config)
-
-	// Connection pool settings — tuned for serverless (GCF)
-	sqldb.SetMaxOpenConns(5)
-	sqldb.SetMaxIdleConns(2)
-	sqldb.SetConnMaxLifetime(5 * time.Minute)
-	sqldb.SetConnMaxIdleTime(1 * time.Minute)
-
-	if err := sqldb.Ping(); err != nil {
-		return nil, fmt.Errorf("failed to ping database: %w", err)
+	// Verify connection
+	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
 	}
 
-	db := bun.NewDB(sqldb, pgdialect.New())
-	db.AddQueryHook(bundebug.NewQueryHook(bundebug.WithVerbose(true)))
+	return client.Database(dbName), nil
+}
 
-	return db, nil
+// Disconnect gracefully closes the MongoDB connection.
+func Disconnect(database *mongo.Database) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return database.Client().Disconnect(ctx)
 }

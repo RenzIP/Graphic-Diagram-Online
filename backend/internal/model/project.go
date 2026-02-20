@@ -4,22 +4,15 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
 )
 
-// Project mirrors the projects table.
+// Project mirrors the projects collection.
 type Project struct {
-	bun.BaseModel `bun:"table:projects,alias:p"`
-
-	ID          uuid.UUID  `bun:"id,pk,type:uuid,default:gen_random_uuid()"  json:"id"`
-	WorkspaceID uuid.UUID  `bun:"workspace_id,type:uuid,notnull"             json:"workspace_id"`
-	Name        string     `bun:"name,notnull"                                json:"name"`
-	Description *string    `bun:"description"                                 json:"description"`
-	CreatedBy   *uuid.UUID `bun:"created_by,type:uuid"                        json:"created_by"`
-	CreatedAt   time.Time  `bun:"created_at,default:now()"                    json:"created_at"`
-	UpdatedAt   time.Time  `bun:"updated_at,default:now()"                    json:"updated_at"`
-
-	// Relations
-	Workspace *Workspace   `bun:"rel:belongs-to,join:workspace_id=id" json:"-"`
-	Creator   *UserProfile `bun:"rel:belongs-to,join:created_by=id"   json:"-"`
+	ID          uuid.UUID  `bson:"_id"          json:"id"`
+	WorkspaceID uuid.UUID  `bson:"workspace_id" json:"workspace_id"`
+	Name        string     `bson:"name"         json:"name"`
+	Description *string    `bson:"description"  json:"description"`
+	CreatedBy   *uuid.UUID `bson:"created_by"   json:"created_by"`
+	CreatedAt   time.Time  `bson:"created_at"   json:"created_at"`
+	UpdatedAt   time.Time  `bson:"updated_at"   json:"updated_at"`
 }

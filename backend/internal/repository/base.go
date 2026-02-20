@@ -2,46 +2,38 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 
-	"github.com/uptrace/bun"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
-// applyPagination adds LIMIT/OFFSET to a Bun SelectQuery.
-func applyPagination(q *bun.SelectQuery, limit, offset int) *bun.SelectQuery {
-	return q.Limit(limit).Offset(offset)
-}
-
-// handleQueryError maps common database errors to AppError.
-func handleQueryError(err error, entityName string) *pkg.AppError {
+// handleMongoError maps common MongoDB errors to AppError.
+func handleMongoError(err error, entityName string) *pkg.AppError {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, sql.ErrNoRows) {
+	if errors.Is(err, mongo.ErrNoDocuments) {
 		return pkg.ErrNotFound.WithMessage(entityName + " not found")
 	}
 	return pkg.ErrInternal.WithMessage("database error").WithDetails(err.Error())
 }
 
-// runInTx executes a function within a database transaction.
-func runInTx(ctx context.Context, db *bun.DB, fn func(tx bun.Tx) error) error {
-	tx, err := db.BeginTx(ctx, nil)
+// paginationOpts returns FindOptions with limit and skip (offset) applied.
+func paginationOpts(limit, offset int) *options.FindOptionsBuilder {
+	return options.Find().SetLimit(int64(limit)).SetSkip(int64(offset))
+}
+
+// runInTx executes a function within a MongoDB session transaction.
+func runInTx(ctx context.Context, db *mongo.Database, fn func(ctx context.Context) (interface{}, error)) error {
+	session, err := db.Client().StartSession()
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if p := recover(); p != nil {
-			_ = tx.Rollback()
-			panic(p) // re-throw after rollback
-		}
-	}()
+	defer session.EndSession(ctx)
 
-	if err := fn(tx); err != nil {
-		_ = tx.Rollback()
-		return err
-	}
-	return tx.Commit()
+	_, err = session.WithTransaction(ctx, fn)
+	return err
 }

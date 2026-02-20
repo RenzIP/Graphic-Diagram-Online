@@ -4,16 +4,13 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/uptrace/bun"
 )
 
-// UserProfile mirrors the user_profiles table.
-// PK references Supabase auth.users(id).
+// UserProfile mirrors the user_profiles collection.
 type UserProfile struct {
-	bun.BaseModel `bun:"table:user_profiles,alias:up"`
-
-	ID        uuid.UUID `bun:"id,pk,type:uuid"             json:"id"`
-	FullName  *string   `bun:"full_name"                    json:"full_name"`
-	AvatarURL *string   `bun:"avatar_url"                   json:"avatar_url"`
-	CreatedAt time.Time `bun:"created_at,default:now()"     json:"created_at"`
+	ID        uuid.UUID `bson:"_id"        json:"id"`
+	Email     string    `bson:"email"      json:"email"`
+	FullName  *string   `bson:"full_name"  json:"full_name"`
+	AvatarURL *string   `bson:"avatar_url" json:"avatar_url"`
+	CreatedAt time.Time `bson:"created_at" json:"created_at"`
 }

@@ -32,11 +32,16 @@ func Setup(app *fiber.App, cfg *config.Config, h Handlers) {
 	// --- Public endpoints (no auth required) ---
 	api.Get("/health", h.Health.Check)
 
+	// OAuth routes (public — these initiate and handle the OAuth flow)
+	api.Get("/auth/google", h.Auth.GoogleLogin)
+	api.Get("/auth/google/callback", h.Auth.GoogleCallback)
+	api.Get("/auth/github", h.Auth.GitHubLogin)
+	api.Get("/auth/github/callback", h.Auth.GitHubCallback)
+
 	// --- Protected endpoints (auth required) ---
-	protected := api.Group("", middleware.Auth(cfg.SupabaseJWTSecret, cfg.SupabaseURL))
+	protected := api.Group("", middleware.Auth(cfg.JWTSecret))
 
 	// Auth
-	protected.Post("/auth/callback", h.Auth.Callback)
 	protected.Get("/auth/me", h.Auth.Me)
 
 	// Workspaces
