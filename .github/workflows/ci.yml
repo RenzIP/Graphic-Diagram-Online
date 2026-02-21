@@ -75,6 +75,4 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'placeholder' }}
-          VITE_API_URL: ${{ vars.VITE_API_URL || 'https://placeholder.cloudfunctions.net/gradiol-api/api' }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || 'http://localhost:8080' }}
