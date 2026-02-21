@@ -5,7 +5,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
-  workflow_call: {} # Allow this workflow to be called by other workflows (e.g. deploy.yml)
+  workflow_call: # Allow this workflow to be called by other workflows (e.g. deploy.yml)
 
 concurrency:
   group: ci-${{ github.ref }}

@@ -8,8 +8,8 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false # Never cancel a running deploy
 
-# ─────────────────────────────────────────────────────
-# Required Secrets (set in GitHub repo Settings → Secrets):
+# ─────────────────────────────────────────────────────────
+# Required Secrets (GitHub repo → Settings → Secrets):
 #   GCP_PROJECT_ID          — Google Cloud project ID
 #   GCP_REGION              — e.g. asia-southeast1
 #   GCP_SA_KEY              — Service Account JSON key (or use WIF below)
@@ -21,18 +21,18 @@ concurrency:
 #   GITHUB_CLIENT_ID        — GitHub OAuth App Client ID
 #   GITHUB_CLIENT_SECRET    — GitHub OAuth App Client Secret
 #   FRONTEND_URL            — Production frontend URL (e.g. https://gradiol.vercel.app)
-#   REDIS_URL               — Redis connection string
+#   REDIS_URL               — Redis connection string (optional)
 #   VERCEL_TOKEN            — Vercel personal access token
 #   VERCEL_ORG_ID           — Vercel organization/team ID
 #   VERCEL_PROJECT_ID       — Vercel project ID
 #
-# Required Variables (set in GitHub repo Settings → Variables):
+# Required Variables (GitHub repo → Settings → Variables):
 #   VITE_API_URL            — Backend GCF URL (e.g. https://...-uc.a.run.app)
 #
 # Optional (Workload Identity Federation instead of SA key):
 #   GCP_WIF_PROVIDER        — projects/*/locations/global/workloadIdentityPools/*/providers/*
 #   GCP_WIF_SERVICE_ACCOUNT — sa-name@project.iam.gserviceaccount.com
-# ─────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────
 
 jobs:
   # ─────────────────────────────────────────────
@@ -41,6 +41,7 @@ jobs:
   ci:
     name: CI Gate
     uses: ./.github/workflows/ci.yml
+    secrets: inherit
 
   # ─────────────────────────────────────────────
   # Backend → Google Cloud Functions Gen 2
@@ -69,6 +70,17 @@ jobs:
 
       - name: Deploy to Cloud Functions Gen 2
         working-directory: backend
+        # Pass secrets via environment variables to avoid shell injection/quoting issues
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          MONGODB_DATABASE: ${{ secrets.MONGODB_DATABASE }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
+          GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           gcloud functions deploy gradiol-api \
             --gen2 \
@@ -82,7 +94,7 @@ jobs:
             --timeout=60s \
             --min-instances=0 \
             --max-instances=10 \
-            --set-env-vars="ENV=production,MONGODB_URI=${{ secrets.MONGODB_URI }},MONGODB_DATABASE=${{ secrets.MONGODB_DATABASE }},JWT_SECRET=${{ secrets.JWT_SECRET }},GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }},GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }},GITHUB_CLIENT_ID=${{ secrets.GITHUB_CLIENT_ID }},GITHUB_CLIENT_SECRET=${{ secrets.GITHUB_CLIENT_SECRET }},FRONTEND_URL=${{ secrets.FRONTEND_URL }},REDIS_URL=${{ secrets.REDIS_URL }}"
+            --set-env-vars="ENV=production,MONGODB_URI=${MONGODB_URI},MONGODB_DATABASE=${MONGODB_DATABASE},JWT_SECRET=${JWT_SECRET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET},FRONTEND_URL=${FRONTEND_URL},REDIS_URL=${REDIS_URL}"
 
       - name: Verify deployment
         run: |
@@ -117,10 +129,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
       - name: Deploy to Vercel
+        working-directory: frontend
         run: vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
