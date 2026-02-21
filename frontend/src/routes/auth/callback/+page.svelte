@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { page } from '$app/stores';
-	import { setAuthToken } from '$lib/stores/auth';
 
 	let status = $state<'loading' | 'error'>('loading');
 	let errorMessage = $state('');
@@ -19,8 +18,12 @@
 				throw new Error(error || 'No authentication token found in URL');
 			}
 
-			// Store the token and load user profile from backend
-			await setAuthToken(token);
+			// Store the token immediately — don't call setAuthToken which may hit
+			// /api/auth/me and clear the cookie on transient failure before we navigate.
+			// The dashboard layout's initAuth() will load the profile after redirect.
+			localStorage.setItem('auth_token', token);
+			const secure = window.location.protocol === 'https:' ? '; Secure' : '';
+			document.cookie = `auth_token=${token}; path=/; max-age=${60 * 60 * 24 * 7}; SameSite=Lax${secure}`;
 
 			// Full page navigation so the browser sends the newly-set auth_token cookie
 			window.location.href = redirectTo;
