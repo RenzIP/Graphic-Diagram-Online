@@ -30,7 +30,7 @@ func NewAuthHandler(authSvc *service.AuthService, cfg *config.Config) *AuthHandl
 
 // GoogleLogin redirects the user to Google's OAuth consent screen.
 func (h *AuthHandler) GoogleLogin(c *fiber.Ctx) error {
-	redirectURI := h.oauthRedirectURI(c, "google")
+	redirectURI := h.oauthRedirectURI("google")
 	url := fmt.Sprintf(
 		"https://accounts.google.com/o/oauth2/v2/auth?client_id=%s&redirect_uri=%s&response_type=code&scope=openid%%20email%%20profile&access_type=offline&prompt=consent",
 		h.cfg.GoogleClientID,
@@ -46,7 +46,7 @@ func (h *AuthHandler) GoogleCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.cfg.FrontendURL+"/login?error=missing_code", fiber.StatusTemporaryRedirect)
 	}
 
-	redirectURI := h.oauthRedirectURI(c, "google")
+	redirectURI := h.oauthRedirectURI("google")
 
 	// Exchange code for tokens
 	tokenResp, err := exchangeGoogleCode(code, h.cfg.GoogleClientID, h.cfg.GoogleClientSecret, redirectURI)
@@ -69,7 +69,7 @@ func (h *AuthHandler) GoogleCallback(c *fiber.Ctx) error {
 
 // GitHubLogin redirects the user to GitHub's OAuth authorization page.
 func (h *AuthHandler) GitHubLogin(c *fiber.Ctx) error {
-	redirectURI := h.oauthRedirectURI(c, "github")
+	redirectURI := h.oauthRedirectURI("github")
 	url := fmt.Sprintf(
 		"https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=user:email",
 		h.cfg.GitHubClientID,
@@ -85,7 +85,7 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 		return c.Redirect(h.cfg.FrontendURL+"/login?error=missing_code", fiber.StatusTemporaryRedirect)
 	}
 
-	redirectURI := h.oauthRedirectURI(c, "github")
+	redirectURI := h.oauthRedirectURI("github")
 
 	// Exchange code for access token
 	accessToken, err := exchangeGitHubCode(code, h.cfg.GitHubClientID, h.cfg.GitHubClientSecret, redirectURI)
@@ -166,12 +166,8 @@ func (h *AuthHandler) signJWT(userID uuid.UUID, email string) (string, error) {
 }
 
 // oauthRedirectURI constructs the OAuth callback URL for the given provider.
-func (h *AuthHandler) oauthRedirectURI(c *fiber.Ctx, provider string) string {
-	scheme := "http"
-	if c.Protocol() == "https" {
-		scheme = "https"
-	}
-	return fmt.Sprintf("%s://%s/api/auth/%s/callback", scheme, c.Get(fiber.HeaderHost), provider)
+func (h *AuthHandler) oauthRedirectURI(provider string) string {
+	return fmt.Sprintf("%s/api/auth/%s/callback", h.cfg.BackendURL, provider)
 }
 
 func strPtr(s string) *string {

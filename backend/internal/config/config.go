@@ -39,8 +39,9 @@ type Config struct {
 	// Redis
 	RedisURL string
 
-	// CORS
+	// CORS / OAuth
 	FrontendURL string
+	BackendURL  string // Full base URL of the backend, e.g. https://REGION.cloudfunctions.net/gradiol-api
 
 	// Rate Limits
 	RateLimits RateLimitConfig
@@ -67,6 +68,7 @@ func Load() *Config {
 		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
 		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		BackendURL:         getEnv("BACKEND_URL", "http://localhost:8080"),
 		RateLimits: RateLimitConfig{
 			Global: getEnvInt("RATE_LIMIT_GLOBAL", 100),
 			Write:  getEnvInt("RATE_LIMIT_WRITE", 30),
