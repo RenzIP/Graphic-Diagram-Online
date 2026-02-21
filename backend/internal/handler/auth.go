@@ -171,7 +171,7 @@ func (h *AuthHandler) oauthRedirectURI(c *fiber.Ctx, provider string) string {
 	if c.Protocol() == "https" {
 		scheme = "https"
 	}
-	return fmt.Sprintf("%s://%s/api/auth/%s/callback", scheme, c.Hostname(), provider)
+	return fmt.Sprintf("%s://%s/api/auth/%s/callback", scheme, c.Get(fiber.HeaderHost), provider)
 }
 
 func strPtr(s string) *string {
