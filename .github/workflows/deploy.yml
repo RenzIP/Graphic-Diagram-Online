@@ -80,6 +80,7 @@ jobs:
           GITHUB_CLIENT_ID: ${{ secrets.GITHUB_CLIENT_ID }}
           GITHUB_CLIENT_SECRET: ${{ secrets.GITHUB_CLIENT_SECRET }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
           REDIS_URL: ${{ secrets.REDIS_URL }}
         run: |
           gcloud functions deploy gradiol-api \
@@ -94,7 +95,7 @@ jobs:
             --timeout=60s \
             --min-instances=0 \
             --max-instances=10 \
-            --set-env-vars="ENV=production,MONGODB_URI=${MONGODB_URI},MONGODB_DATABASE=${MONGODB_DATABASE},JWT_SECRET=${JWT_SECRET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET},FRONTEND_URL=${FRONTEND_URL},REDIS_URL=${REDIS_URL}"
+            --set-env-vars="ENV=production,MONGODB_URI=${MONGODB_URI},MONGODB_DATABASE=${MONGODB_DATABASE},JWT_SECRET=${JWT_SECRET},GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID},GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET},GITHUB_CLIENT_ID=${GITHUB_CLIENT_ID},GITHUB_CLIENT_SECRET=${GITHUB_CLIENT_SECRET},FRONTEND_URL=${FRONTEND_URL},BACKEND_URL=${BACKEND_URL},REDIS_URL=${REDIS_URL}"
 
       - name: Verify deployment
         run: |
