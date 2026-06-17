@@ -5,8 +5,10 @@ node_modules
 .vercel
 .netlify
 .wrangler
-/.svelte-kit
 /build
+/.next
+next-env.d.ts
+dev-server.log
 
 # OS
 .DS_Store
@@ -17,10 +19,6 @@ Thumbs.db
 .env.*
 !.env.example
 !.env.test
-
-# Vite
-vite.config.js.timestamp-*
-vite.config.ts.timestamp-*
 
 .vercel
 .env*.local
