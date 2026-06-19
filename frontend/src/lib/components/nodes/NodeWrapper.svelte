@@ -22,6 +22,16 @@
 	let resizeHandle: 'nw' | 'ne' | 'sw' | 'se' | null = null;
 	let startSize = { width: 0, height: 0 };
 
+	// Rotate state
+	let isRotating = $state(false);
+	let startRotation = 0;
+	let centerPos = { x: 0, y: 0 };
+
+	const SNAP_GRID = 10;
+	function snap(val: number, useSnap = true) {
+		return useSnap ? Math.round(val / SNAP_GRID) * SNAP_GRID : val;
+	}
+
 	// Edit state
 	let isEditing = $state(false);
 	let inputRef: HTMLTextAreaElement | undefined = $state();
@@ -56,10 +66,45 @@
 		startSize = { width: node.width || 120, height: node.height || 60 };
 	}
 
+	function handleRotateMouseDown(event: MouseEvent) {
+		event.stopPropagation();
+		event.preventDefault();
+		isRotating = true;
+		startRotation = node.rotation || 0;
+		startPos = { x: event.clientX, y: event.clientY };
+		
+		// Calculate center of node in canvas space
+		centerPos = {
+			x: node.position.x + (node.width || 120) / 2,
+			y: node.position.y + (node.height || 60) / 2
+		};
+	}
+
 	function handleMouseMove(event: MouseEvent) {
 		const scale = $canvasStore.k;
 		const dx = (event.clientX - startPos.x) / scale;
 		const dy = (event.clientY - startPos.y) / scale;
+
+		if (isRotating) {
+			const centerX = (centerPos.x * scale) + $canvasStore.x;
+			const centerY = (centerPos.y * scale) + $canvasStore.y;
+			
+			const angle1 = Math.atan2(startPos.y - centerY, startPos.x - centerX);
+			const angle2 = Math.atan2(event.clientY - centerY, event.clientX - centerX);
+			
+			let deltaRotation = (angle2 - angle1) * (180 / Math.PI);
+			
+			let newRotation = startRotation + deltaRotation;
+			// Snap rotation to 15 degrees if shift is pressed
+			if (event.shiftKey) {
+				newRotation = Math.round(newRotation / 15) * 15;
+			}
+			
+			documentStore.updateNode(node.id, {
+				rotation: newRotation
+			});
+			return;
+		}
 
 		if (isResizing && resizeHandle) {
 			let newX = startNodePos.x;
@@ -82,20 +127,24 @@
 			if (resizeHandle.includes('w')) newX = startNodePos.x + (startSize.width - newWidth);
 			if (resizeHandle.includes('n')) newY = startNodePos.y + (startSize.height - newHeight);
 
+			const useSnap = !event.altKey;
+
 			documentStore.updateNode(node.id, {
-				position: { x: newX, y: newY },
-				width: newWidth,
-				height: newHeight
+				position: { x: snap(newX, useSnap), y: snap(newY, useSnap) },
+				width: snap(newWidth, useSnap),
+				height: snap(newHeight, useSnap)
 			});
 			return;
 		}
 
 		if (!isDragging) return;
 
+		const useSnap = !event.altKey;
+
 		documentStore.updateNode(node.id, {
 			position: {
-				x: startNodePos.x + dx,
-				y: startNodePos.y + dy
+				x: snap(startNodePos.x + dx, useSnap),
+				y: snap(startNodePos.y + dy, useSnap)
 			}
 		});
 	}
@@ -103,6 +152,7 @@
 	function handleMouseUp() {
 		isDragging = false;
 		isResizing = false;
+		isRotating = false;
 		resizeHandle = null;
 	}
 
@@ -156,7 +206,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <g
-	transform="translate({node.position.x} {node.position.y})"
+	transform="translate({node.position.x} {node.position.y}) rotate({node.rotation || 0} {(node.width || 120) / 2} {(node.height || 60) / 2})"
 	onmousedown={handleMouseDown}
 	ondblclick={handleDblClick}
 	class="group cursor-move outline-none"
@@ -250,6 +300,23 @@
 				height={8}
 				class="pointer-events-auto cursor-se-resize fill-indigo-500 stroke-white stroke-1"
 				onmousedown={(e) => handleResizeMouseDown(e, 'se')}
+			/>
+			<!-- Rotate Handle -->
+			<rect
+				x={(node.width || 120) / 2 - 4}
+				y={-28}
+				width={8}
+				height={8}
+				rx={4}
+				class="pointer-events-auto cursor-crosshair fill-white stroke-indigo-500 stroke-2 hover:fill-indigo-500 transition-colors"
+				onmousedown={(e) => handleRotateMouseDown(e)}
+			/>
+			<line
+				x1={(node.width || 120) / 2}
+				y1={-20}
+				x2={(node.width || 120) / 2}
+				y2={-8}
+				class="pointer-events-none stroke-indigo-500 stroke-1"
 			/>
 		{/if}
 	{/if}

@@ -28,7 +28,7 @@
 	const typeStyles: Record<string, string> = {
 		success: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
 		error: 'border-red-500/30 bg-red-500/10 text-red-400',
-		info: 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400'
+		info: 'border-accent-500/30 bg-accent-500/10 text-accent-400'
 	};
 
 	const typeIcons: Record<string, string> = {

@@ -3,6 +3,8 @@
  * Matches backend endpoints from README.md
  */
 
+import { handleMockRequest } from './mock';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
 
 interface RequestOptions extends RequestInit {
@@ -26,6 +28,10 @@ function getAuthToken(): string | null {
 }
 
 async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+	if (typeof window !== 'undefined' && localStorage.getItem('use_mock_api') === 'true') {
+		return handleMockRequest<T>(endpoint, options);
+	}
+
 	const { params, ...fetchOptions } = options;
 
 	let url = `${API_BASE_URL}${endpoint}`;

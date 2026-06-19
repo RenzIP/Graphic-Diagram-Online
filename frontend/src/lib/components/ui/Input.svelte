@@ -20,22 +20,23 @@
 	} = $props();
 </script>
 
-<div class="w-full {className}">
+<div class="w-full flex flex-col gap-1.5 {className}">
 	{#if label}
-		<label for={id} class="mb-1.5 block text-sm font-medium text-slate-300">
+		<label for={id} class="text-sm font-medium text-slate-300">
 			{label}
 		</label>
 	{/if}
-	<input
-		{id}
-		{type}
-		bind:value
-		{placeholder}
-		class="w-full rounded-lg border border-slate-800 bg-slate-950 px-4 py-2 text-slate-200 placeholder-slate-500 transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/50 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50
-    {error ? 'border-red-500/50 focus:border-red-500 focus:ring-red-500/20' : ''}"
-		{...rest}
-	/>
+	<div class="relative">
+		<input
+			{id}
+			{type}
+			bind:value
+			{placeholder}
+			class="flex h-11 w-full rounded-xl border border-white/10 bg-surface/50 px-4 py-2 text-sm text-white placeholder:text-slate-500 shadow-sm transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:border-primary/50 hover:border-white/20 disabled:cursor-not-allowed disabled:opacity-50 {error ? 'border-error/50 focus-visible:ring-error/50 focus-visible:border-error/50' : ''}"
+			{...rest}
+		/>
+	</div>
 	{#if error}
-		<p class="mt-1 text-xs text-red-400">{error}</p>
+		<p class="text-xs text-error font-medium">{error}</p>
 	{/if}
 </div>

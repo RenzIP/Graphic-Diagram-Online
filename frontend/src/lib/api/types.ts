@@ -39,6 +39,23 @@ export interface AuthUser {
 	avatar_url: string | null;
 }
 
+export interface AuthSessionResponse {
+	token: string;
+	user: AuthUser;
+}
+
+export interface LoginRequest {
+	email: string;
+	password: string;
+}
+
+export interface RegisterRequest {
+	full_name: string;
+	email: string;
+	password: string;
+	role?: 'admin' | 'user';
+}
+
 // ── Workspace ───────────────────────────────────────────
 
 export interface Workspace {

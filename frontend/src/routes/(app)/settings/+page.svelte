@@ -4,6 +4,7 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import Input from '$lib/components/ui/Input.svelte';
 	import Avatar from '$lib/components/ui/Avatar.svelte';
+	import { showToast } from '$lib/utils/toast';
 
 	let settings = $state({
 		theme: 'dark',
@@ -19,7 +20,7 @@
 		// Simulate API call
 		setTimeout(() => {
 			isSaving = false;
-			alert('Settings saved successfully!');
+			showToast('Settings berhasil disimpan.', 'success');
 		}, 800);
 	}
 </script>
@@ -49,6 +50,7 @@
 							<Avatar initials="JD" size="lg" />
 							<button
 								class="absolute -right-1 -bottom-1 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-500 text-white shadow-sm hover:bg-indigo-400"
+								aria-label="Ubah avatar"
 							>
 								<svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 									<path
@@ -69,17 +71,14 @@
 						<div class="flex-1 space-y-4">
 							<div class="grid grid-cols-2 gap-4">
 								<div>
-									<label class="mb-1 block text-sm font-medium text-slate-400">First Name</label>
-									<Input value="John" />
+									<Input label="First Name" value="John" />
 								</div>
 								<div>
-									<label class="mb-1 block text-sm font-medium text-slate-400">Last Name</label>
-									<Input value="Doe" />
+									<Input label="Last Name" value="Doe" />
 								</div>
 							</div>
 							<div>
-								<label class="mb-1 block text-sm font-medium text-slate-400">Email</label>
-								<Input value="john@example.com" disabled />
+								<Input label="Email" value="john@example.com" disabled />
 							</div>
 						</div>
 					</div>
@@ -112,6 +111,7 @@
 								class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none {settings.notifications
 									? 'bg-indigo-500'
 									: 'bg-slate-700'}"
+								aria-label="Toggle email notifications"
 								onclick={() => (settings.notifications = !settings.notifications)}
 							>
 								<span
@@ -137,6 +137,7 @@
 								class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:outline-none {settings.autoSave
 									? 'bg-indigo-500'
 									: 'bg-slate-700'}"
+								aria-label="Toggle auto save"
 								onclick={() => (settings.autoSave = !settings.autoSave)}
 							>
 								<span

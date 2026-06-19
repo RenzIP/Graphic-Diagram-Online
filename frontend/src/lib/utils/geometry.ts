@@ -113,9 +113,110 @@ export function getOrthogonalPath(
 	sourcePosition: 'top' | 'right' | 'bottom' | 'left' = 'bottom',
 	targetPosition: 'top' | 'right' | 'bottom' | 'left' = 'top'
 ): string {
-	const midX = (source.x + target.x) / 2;
-	const midY = (source.y + target.y) / 2;
+	const minSeg = 20; // Minimum segment length going out of a port
 
-	// Simple step logic
-	return `M ${source.x} ${source.y} L ${source.x} ${midY} L ${target.x} ${midY} L ${target.x} ${target.y}`;
+	// 1. Calculate the initial step out of the source
+	let p1 = { ...source };
+	switch (sourcePosition) {
+		case 'top': p1.y -= minSeg; break;
+		case 'bottom': p1.y += minSeg; break;
+		case 'left': p1.x -= minSeg; break;
+		case 'right': p1.x += minSeg; break;
+	}
+
+	// 2. Calculate the final step into the target
+	let p2 = { ...target };
+	switch (targetPosition) {
+		case 'top': p2.y -= minSeg; break;
+		case 'bottom': p2.y += minSeg; break;
+		case 'left': p2.x -= minSeg; break;
+		case 'right': p2.x += minSeg; break;
+	}
+
+	// 3. Heuristic routing between p1 and p2 based on orientations
+	const dx = p2.x - p1.x;
+	const dy = p2.y - p1.y;
+
+	let path = `M ${source.x} ${source.y} L ${p1.x} ${p1.y}`;
+
+	// If source goes vertical and target goes vertical
+	if (['top', 'bottom'].includes(sourcePosition) && ['top', 'bottom'].includes(targetPosition)) {
+		const midY = p1.y + dy / 2;
+		path += ` L ${p1.x} ${midY} L ${p2.x} ${midY}`;
+	} 
+	// If source goes horizontal and target goes horizontal
+	else if (['left', 'right'].includes(sourcePosition) && ['left', 'right'].includes(targetPosition)) {
+		const midX = p1.x + dx / 2;
+		path += ` L ${midX} ${p1.y} L ${midX} ${p2.y}`;
+	}
+	// If source goes vertical and target goes horizontal
+	else if (['top', 'bottom'].includes(sourcePosition) && ['left', 'right'].includes(targetPosition)) {
+		// Just one corner needed
+		path += ` L ${p1.x} ${p2.y}`;
+	}
+	// If source goes horizontal and target goes vertical
+	else if (['left', 'right'].includes(sourcePosition) && ['top', 'bottom'].includes(targetPosition)) {
+		path += ` L ${p2.x} ${p1.y}`;
+	}
+
+	path += ` L ${p2.x} ${p2.y} L ${target.x} ${target.y}`;
+	return path;
 }
+
+/**
+ * Calculates the exact point on the node boundary where a line connecting
+ * to targetPoint intersects. Supports Rectangles, Diamonds (decision), and Ellipses (usecase/start-end).
+ */
+export function getNodeBoundaryPoint(
+	node: { position: { x: number; y: number }; width?: number; height?: number; type: string },
+	targetPoint: Point
+): Point {
+	const w = node.width || 120;
+	const h = node.height || 60;
+	const cx = node.position.x + w / 2;
+	const cy = node.position.y + h / 2;
+
+	const dx = targetPoint.x - cx;
+	const dy = targetPoint.y - cy;
+
+	// If points overlap, return center
+	if (dx === 0 && dy === 0) {
+		return { x: cx, y: cy };
+	}
+
+	const w2 = w / 2;
+	const h2 = h / 2;
+
+	// 1. Diamond shape (decision)
+	if (node.type === 'decision') {
+		const t = 1 / (Math.abs(dx) / w2 + Math.abs(dy) / h2);
+		return {
+			x: cx + t * dx,
+			y: cy + t * dy
+		};
+	}
+
+	// 2. Ellipse shapes (usecase, start-end)
+	if (node.type === 'usecase' || node.type === 'start-end') {
+		const t = 1 / Math.sqrt((dx * dx) / (w2 * w2) + (dy * dy) / (h2 * h2));
+		return {
+			x: cx + t * dx,
+			y: cy + t * dy
+		};
+	}
+
+	// 3. Rectangle shape (default for everything else)
+	const absDx = Math.abs(dx);
+	const absDy = Math.abs(dy);
+
+	const tx = absDx > 0 ? w2 / absDx : Infinity;
+	const ty = absDy > 0 ? h2 / absDy : Infinity;
+
+	const t = Math.min(tx, ty);
+
+	return {
+		x: cx + t * dx,
+		y: cy + t * dy
+	};
+}
+

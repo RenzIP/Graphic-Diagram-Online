@@ -37,16 +37,16 @@
 		onmousedown={handleBackdropClick}
 	>
 		<div
-			class="animate-in w-full max-w-lg rounded-xl border border-slate-700 bg-slate-900 shadow-2xl shadow-black/50"
+			class="animate-in w-full max-w-lg rounded-2xl border border-navy-800 bg-navy-950/95 backdrop-blur-xl shadow-2xl shadow-black/60"
 			role="dialog"
 			aria-modal="true"
 			aria-label={title || 'Modal dialog'}
 		>
 			{#if title}
-				<div class="flex items-center justify-between border-b border-slate-800 px-6 py-4">
-					<h2 class="text-lg font-semibold text-white">{title}</h2>
+				<div class="flex items-center justify-between border-b border-navy-800 px-6 py-4">
+					<h2 class="text-lg font-semibold text-white tracking-tight">{title}</h2>
 					<button
-						class="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+						class="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-navy-800 hover:text-white"
 						onclick={onclose}
 						aria-label="Close"
 					>

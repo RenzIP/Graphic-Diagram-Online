@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Avatar from '$lib/components/ui/Avatar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Logo from '$lib/components/ui/Logo.svelte';
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import { currentUser, logout } from '$lib/stores/auth';
@@ -11,6 +12,7 @@
 	let activePath = $derived($page.url.pathname);
 	let workspaces = $state<Workspace[]>([]);
 	let showUserMenu = $state(false);
+	let mobileOpen = $state(false);
 
 	// Reactive user info from auth store
 	let user = $derived($currentUser);
@@ -49,26 +51,36 @@
 	}}
 />
 
-<aside class="flex h-full w-64 flex-col border-r border-slate-800 bg-slate-900">
+{#if mobileOpen}
+	<button
+		class="fixed inset-0 z-30 bg-slate-950/75 lg:hidden"
+		aria-label="Close navigation"
+		onclick={() => (mobileOpen = false)}
+	></button>
+{/if}
+
+<button
+	class="fixed top-4 left-4 z-50 flex h-11 w-11 items-center justify-center rounded-xl border border-slate-800 bg-slate-900 text-slate-200 shadow-lg lg:hidden"
+	aria-label="Open navigation"
+	onclick={() => (mobileOpen = true)}
+>
+	<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+		<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+	</svg>
+</button>
+
+<aside
+	class="fixed inset-y-0 left-0 z-40 flex h-full w-72 -translate-x-full flex-col border-r border-white/5 bg-background/95 backdrop-blur-xl transition-transform duration-200 lg:static lg:w-64 lg:translate-x-0 {mobileOpen
+		? 'translate-x-0'
+		: ''}"
+>
 	<!-- Header -->
-	<div class="flex h-16 items-center border-b border-slate-800 px-6">
+	<div class="flex h-16 items-center border-b border-white/5 px-6">
 		<div class="flex items-center gap-2">
-			<div
-				class="flex h-6 w-6 items-center justify-center rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20"
-			>
-				<svg class="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-					/>
-				</svg>
-			</div>
-			<span class="text-lg font-bold tracking-tight text-white">GraDiOl</span>
+			<Logo size="14" class="text-white" />
+			<span class="text-lg font-bold tracking-tight text-white font-outfit">GraDiOl</span>
 		</div>
 	</div>
-
 	<!-- Navigation -->
 	<div class="flex-1 space-y-6 overflow-y-auto px-3 py-6">
 		<div>
@@ -78,8 +90,9 @@
 			<div class="space-y-1">
 				<Button
 					variant={activePath === '/dashboard' ? 'secondary' : 'ghost'}
-					class="w-full justify-start"
+					class="w-full justify-start hover-premium"
 					href="/dashboard"
+					onclick={() => (mobileOpen = false)}
 				>
 					<svg
 						class="mr-3 h-4 w-4 text-slate-400"
@@ -98,8 +111,9 @@
 				</Button>
 				<Button
 					variant={activePath.startsWith('/team') ? 'secondary' : 'ghost'}
-					class="w-full justify-start"
+					class="w-full justify-start hover-premium"
 					href="/team"
+					onclick={() => (mobileOpen = false)}
 				>
 					<svg
 						class="mr-3 h-4 w-4 text-slate-400"
@@ -118,8 +132,9 @@
 				</Button>
 				<Button
 					variant={activePath.startsWith('/settings') ? 'secondary' : 'ghost'}
-					class="w-full justify-start"
+					class="w-full justify-start hover-premium"
 					href="/settings"
+					onclick={() => (mobileOpen = false)}
 				>
 					<svg
 						class="mr-3 h-4 w-4 text-slate-400"
@@ -172,6 +187,7 @@
 							variant={activePath === `/workspace/${ws.id}` ? 'secondary' : 'ghost'}
 							class="w-full justify-start pl-3 text-sm"
 							href={`/workspace/${ws.id}`}
+							onclick={() => (mobileOpen = false)}
 						>
 							<span
 								class={`mr-3 h-2 w-2 shrink-0 rounded-full bg-${wsColors[i % wsColors.length]}-500`}

@@ -15,7 +15,7 @@
 		white: { fill: '#ffffff', stroke: '#94a3b8' }
 	};
 
-	const fallback = styleMap[node.color || 'slate'] || styleMap.slate;
+	let fallback = $derived.by(() => styleMap[node.color || 'slate'] || styleMap.slate);
 
 	let w = $derived(node.width || 120);
 	let h = $derived(node.height || 60);

@@ -36,7 +36,7 @@
 		y={h - 2}
 		text-anchor="middle"
 		class="text-[10px] font-medium select-none"
-		style="fill: #cbd5e1; font-family: sans-serif; font-size: 10px; font-weight: 500; stroke: none;"
+		style="fill: #cbd5e1; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10px; font-weight: 500; stroke: none;"
 	>
 		{node.label}
 	</text>

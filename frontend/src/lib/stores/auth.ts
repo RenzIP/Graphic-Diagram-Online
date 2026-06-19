@@ -7,7 +7,7 @@
  */
 import { writable, derived } from 'svelte/store';
 import { authApi } from '$lib/api/auth';
-import type { AuthUser } from '$lib/api/types';
+import type { AuthSessionResponse, AuthUser } from '$lib/api/types';
 
 // ── Types ───────────────────────────────────────────────
 
@@ -87,6 +87,10 @@ export function setAuthUser(user: AuthUser, token: string): void {
 		isLoading: false,
 		error: null
 	});
+}
+
+export function applyAuthSession(session: AuthSessionResponse): void {
+	setAuthUser(session.user, session.token);
 }
 
 /**

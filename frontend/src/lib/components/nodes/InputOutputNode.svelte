@@ -36,7 +36,7 @@
 		dominant-baseline="middle"
 		text-anchor="middle"
 		class="pointer-events-none text-sm font-medium select-none"
-		style="fill: #e2e8f0; font-family: sans-serif; font-size: 14px; font-weight: 500;"
+		style="fill: #e2e8f0; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 14px; font-weight: 500;"
 	>
 		{node.label}
 	</text>

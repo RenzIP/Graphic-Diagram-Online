@@ -4,7 +4,9 @@
 package app
 
 import (
+	"context"
 	"log"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -42,6 +44,12 @@ func New() *Instance {
 	wsRepo := repository.NewWorkspaceRepo(database)
 	projRepo := repository.NewProjectRepo(database)
 	docRepo := repository.NewDocumentRepo(database)
+
+	indexCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := userRepo.EnsureIndexes(indexCtx); err != nil {
+		log.Fatalf("Failed to ensure user indexes: %v", err)
+	}
 
 	// --- Service layer ---
 	authSvc := service.NewAuthService(userRepo)

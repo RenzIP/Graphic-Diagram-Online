@@ -2,6 +2,7 @@
 	import { documentStore } from '$lib/stores/document';
 	import { selectionStore } from '$lib/stores/selection';
 	import { canvasStore } from '$lib/stores/canvas';
+	import { getNodeBoundaryPoint } from '$lib/utils/geometry';
 
 	// Helper to get node
 	function getNode(id: string) {
@@ -142,8 +143,22 @@
 				y: targetNode.position.y + (targetNode.height || 60) / 2
 			}}
 
+			{@const sourcePoint = (() => {
+				const targetPointForBoundary = (edge.waypoints && edge.waypoints.length > 0) 
+					? edge.waypoints[0] 
+					: targetCenter;
+				return getNodeBoundaryPoint(sourceNode, targetPointForBoundary);
+			})()}
+
+			{@const targetPoint = (() => {
+				const sourcePointForBoundary = (edge.waypoints && edge.waypoints.length > 0) 
+					? edge.waypoints[edge.waypoints.length - 1] 
+					: sourceCenter;
+				return getNodeBoundaryPoint(targetNode, sourcePointForBoundary);
+			})()}
+
 			<!-- Construct full path of points -->
-			{@const points = [sourceCenter, ...(edge.waypoints || []), targetCenter]}
+			{@const points = [sourcePoint, ...(edge.waypoints || []), targetPoint]}
 
 			<!-- Render Segments (Virtual Handles) -->
 			{#each points as point, i}
@@ -184,8 +199,8 @@
 
 			<!-- Source Handle (Endpoint) -->
 			<circle
-				cx={sourceCenter.x}
-				cy={sourceCenter.y}
+				cx={sourcePoint.x}
+				cy={sourcePoint.y}
 				r="6"
 				class="cursor-move fill-indigo-500 stroke-white stroke-2 transition-transform hover:scale-125"
 				onmousedown={(e) => handleEndpointMouseDown(e, edge.source, edge.id, true)}
@@ -196,8 +211,8 @@
 
 			<!-- Target Handle (Endpoint) -->
 			<circle
-				cx={targetCenter.x}
-				cy={targetCenter.y}
+				cx={targetPoint.x}
+				cy={targetPoint.y}
 				r="6"
 				class="cursor-move fill-indigo-500 stroke-white stroke-2 transition-transform hover:scale-125"
 				onmousedown={(e) => handleEndpointMouseDown(e, edge.source, edge.id, false)}

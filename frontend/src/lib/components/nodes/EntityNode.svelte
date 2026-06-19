@@ -75,7 +75,7 @@
 		y={16}
 		text-anchor="middle"
 		class="text-[11px] font-bold select-none"
-		style="fill: {theme.labelFill}; font-family: sans-serif; font-size: 11px; font-weight: 700;"
+		style="fill: {theme.labelFill}; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 11px; font-weight: 700;"
 	>
 		{node.label}
 	</text>
@@ -99,7 +99,7 @@
 			y={24 + (h - 24) / 2 + 4}
 			text-anchor="middle"
 			class="text-[10px] italic select-none"
-			style="fill: #64748b; font-family: sans-serif; font-size: 10px; font-style: italic;"
+			style="fill: #64748b; font-family: 'Plus Jakarta Sans', sans-serif; font-size: 10px; font-style: italic;"
 		>
 			(attributes)
 		</text>

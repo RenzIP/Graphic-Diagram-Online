@@ -9,7 +9,6 @@
 	import PropertyPanel from '$lib/components/editor/PropertyPanel.svelte';
 	import DslEditor from '$lib/components/editor/DslEditor.svelte';
 	import Minimap from '$lib/components/canvas/Minimap.svelte';
-	import Toast from '$lib/components/ui/Toast.svelte';
 	import { documentStore } from '$lib/stores/document';
 	import { historyStore } from '$lib/stores/history';
 	import { selectionStore } from '$lib/stores/selection';
@@ -222,7 +221,7 @@
 
 <svelte:window onkeydown={handleKeyDown} onbeforeunload={handleBeforeUnload} />
 
-<div class="flex h-screen w-screen flex-col overflow-hidden bg-slate-950 text-slate-200">
+<div class="flex h-screen w-screen flex-col overflow-hidden bg-background text-text-primary font-inter">
 	<!-- Top Toolbar -->
 	<Toolbar
 		title={diagramTitle}
@@ -241,7 +240,7 @@
 		{/if}
 
 		<!-- Main Canvas Area -->
-		<main class="relative flex flex-1 flex-col bg-slate-950">
+		<main class="relative flex flex-1 flex-col bg-[#0f141f]">
 			<div class="relative flex-1">
 				<Canvas bind:svgElement={svgRef}>
 					<EdgeRenderer />
@@ -256,13 +255,13 @@
 				{#if !showDslEditor}
 					<div class="absolute right-0 bottom-0 left-0 z-20">
 						<button
-							class="flex w-full items-center justify-between border-t border-slate-800 bg-slate-900/90 px-4 py-2 backdrop-blur-sm transition-colors hover:bg-slate-800/90"
+							class="flex w-full items-center justify-between border-t border-white/5 bg-surface/90 px-4 py-2 backdrop-blur-md transition-colors hover:bg-surface"
 							onclick={() => (showDslEditor = true)}
 							aria-label="Open DSL Editor"
 						>
 							<div class="flex items-center gap-2">
 								<svg
-									class="h-4 w-4 text-cyan-400"
+									class="h-4 w-4 text-[#06b6d4]"
 									fill="none"
 									viewBox="0 0 24 24"
 									stroke="currentColor"
@@ -274,10 +273,10 @@
 										d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"
 									/>
 								</svg>
-								<span class="text-xs font-medium text-slate-400">Text-to-Diagram (DSL)</span>
+								<span class="text-xs font-medium text-text-secondary">Text-to-Diagram (DSL)</span>
 							</div>
 							<svg
-								class="h-4 w-4 text-slate-500"
+								class="h-4 w-4 text-text-tertiary"
 								fill="none"
 								viewBox="0 0 24 24"
 								stroke="currentColor"
@@ -309,6 +308,3 @@
 		{/if}
 	</div>
 </div>
-
-<!-- Toast Notifications -->
-<Toast />

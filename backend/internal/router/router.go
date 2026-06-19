@@ -31,6 +31,8 @@ func Setup(app *fiber.App, cfg *config.Config, h Handlers) {
 
 	// --- Public endpoints (no auth required) ---
 	api.Get("/health", h.Health.Check)
+	api.Post("/auth/register", h.Auth.Register)
+	api.Post("/auth/login", h.Auth.Login)
 
 	// OAuth routes (public — these initiate and handle the OAuth flow)
 	api.Get("/auth/google", h.Auth.GoogleLogin)

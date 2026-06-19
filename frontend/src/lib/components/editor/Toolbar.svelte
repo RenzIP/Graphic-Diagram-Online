@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { documentStore } from '$lib/stores/document';
 	import { canvasStore } from '$lib/stores/canvas';
 	import { historyStore } from '$lib/stores/history';
@@ -37,6 +38,7 @@
 
 	let editingTitle = $state(false);
 	let titleInput = $state('');
+	let titleInputRef = $state<HTMLInputElement | null>(null);
 	let showExportModal = $state(false);
 	let isExporting = $state(false);
 
@@ -76,6 +78,14 @@
 	function handleTitleSave() {
 		editingTitle = false;
 		onTitleChange?.(titleInput);
+	}
+
+	async function startEditingTitle() {
+		editingTitle = true;
+		titleInput = title;
+		await tick();
+		titleInputRef?.focus();
+		titleInputRef?.select();
 	}
 
 	function handleExport(format: string) {
@@ -119,64 +129,67 @@
 	let zoomPercent = $derived(Math.round($canvasStore.k * 100));
 </script>
 
-<div class="flex h-12 items-center justify-between border-b border-slate-800 bg-slate-900 px-4">
+<div class="flex h-14 items-center justify-between border-b border-white/5 bg-background/80 backdrop-blur-xl px-4 z-10">
 	<!-- Left: Logo + Title -->
 	<div class="flex items-center gap-3">
 		<a
 			href="/dashboard"
-			class="flex items-center gap-2 text-slate-400 transition-colors hover:text-white"
+			class="flex items-center gap-2 text-text-tertiary transition-colors hover:text-white"
 			aria-label="Back to Dashboard"
 		>
-			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M10 19l-7-7m0 0l7-7m-7 7h18"
-				/>
-			</svg>
+			<div class="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-accent shadow-lg shadow-primary/20 border border-white/10">
+				<svg class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+				</svg>
+			</div>
 		</a>
-		<div class="h-5 w-px bg-slate-700"></div>
+		<div class="h-6 w-px bg-white/10"></div>
 
 		{#if editingTitle}
 			<input
+				bind:this={titleInputRef}
 				type="text"
 				bind:value={titleInput}
 				onblur={handleTitleSave}
 				onkeydown={(e) => {
 					if (e.key === 'Enter') handleTitleSave();
 				}}
-				class="rounded border border-indigo-500 bg-slate-800 px-2 py-0.5 text-sm text-white focus:outline-none"
-				autofocus
+				class="rounded border border-primary bg-surface/50 px-2 py-1 text-sm font-medium text-white focus:outline-none"
 			/>
 		{:else}
 			<button
-				class="rounded px-2 py-0.5 text-sm font-medium text-white transition-colors hover:bg-slate-800"
-				onclick={() => {
-					editingTitle = true;
-					titleInput = title;
-				}}
+				class="rounded px-2 py-1 text-sm font-medium text-white transition-colors hover:bg-surface/50"
+				onclick={startEditingTitle}
 			>
 				{title}
 			</button>
 		{/if}
 
-		<span class="rounded bg-slate-800 px-2 py-0.5 text-xs text-slate-400 capitalize"
+		<span class="rounded-full bg-white/5 border border-white/10 px-2.5 py-0.5 text-[10px] font-medium tracking-wide uppercase text-text-secondary"
 			>{diagramType}</span
 		>
 		{#if isSaving}
-			<span class="text-xs text-slate-500">Saving...</span>
+			<span class="flex items-center gap-1.5 text-xs text-slate-500 ml-2">
+				<div class="h-3 w-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent"></div>
+				Saving
+			</span>
 		{:else if isDirty}
-			<span class="text-xs text-amber-400" title="Unsaved changes">●</span>
+			<span class="flex items-center gap-1.5 text-xs text-amber-400 ml-2" title="Unsaved changes">
+				<div class="h-2 w-2 rounded-full bg-amber-400"></div>
+				Unsaved
+			</span>
 		{:else if lastSavedAt}
-			<span class="text-xs text-slate-600" title="Saved at {lastSavedAt}">✓</span>
+			<span class="flex items-center gap-1.5 text-xs text-slate-500 ml-2" title="Saved at {lastSavedAt}">
+				<svg class="h-3.5 w-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+				Saved
+			</span>
 		{/if}
 	</div>
 
 	<!-- Center: Actions -->
-	<div class="flex items-center gap-1">
+	<div class="flex items-center gap-1 bg-surface/50 p-1.5 rounded-xl border border-white/5 shadow-sm">
 		<button
-			class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white disabled:opacity-30"
+			class="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
 			onclick={handleUndo}
 			disabled={!$historyStore.canUndo}
 			aria-label="Undo"
@@ -192,7 +205,7 @@
 			</svg>
 		</button>
 		<button
-			class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white disabled:opacity-30"
+			class="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white disabled:opacity-30 disabled:hover:bg-transparent"
 			onclick={handleRedo}
 			disabled={!$historyStore.canRedo}
 			aria-label="Redo"
@@ -208,7 +221,7 @@
 			</svg>
 		</button>
 
-		<div class="mx-1 h-5 w-px bg-slate-700"></div>
+		<div class="mx-1 h-5 w-px bg-white/10"></div>
 
 		<!-- Alignment Tools -->
 		<div
@@ -217,7 +230,7 @@
 			class:pointer-events-none={!canAlign}
 		>
 			<button
-				class="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+				class="rounded-lg p-1.5 text-text-tertiary hover:bg-white/5 hover:text-white transition-colors"
 				title="Align Left"
 				onclick={() => handleAlign('left')}
 			>
@@ -226,7 +239,7 @@
 				>
 			</button>
 			<button
-				class="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+				class="rounded-lg p-1.5 text-text-tertiary hover:bg-white/5 hover:text-white transition-colors"
 				title="Align Center"
 				onclick={() => handleAlign('center')}
 			>
@@ -235,7 +248,7 @@
 				>
 			</button>
 			<button
-				class="rounded p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+				class="rounded-lg p-1.5 text-text-tertiary hover:bg-white/5 hover:text-white transition-colors"
 				title="Align Right"
 				onclick={() => handleAlign('right')}
 			>
@@ -245,11 +258,11 @@
 			</button>
 		</div>
 
-		<div class="mx-1 h-5 w-px bg-slate-700"></div>
+		<div class="mx-1 h-5 w-px bg-white/10"></div>
 
 		<!-- Zoom -->
 		<button
-			class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+			class="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white"
 			onclick={zoomOut}
 			aria-label="Zoom out"
 		>
@@ -258,11 +271,11 @@
 			</svg>
 		</button>
 		<button
-			class="min-w-[48px] rounded px-1.5 py-0.5 text-xs text-slate-300 transition-colors hover:bg-slate-800"
+			class="min-w-[48px] rounded-lg px-1.5 py-0.5 text-xs font-medium text-text-secondary transition-colors hover:bg-white/5"
 			onclick={zoomReset}>{zoomPercent}%</button
 		>
 		<button
-			class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+			class="rounded-lg p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white"
 			onclick={zoomIn}
 			aria-label="Zoom in"
 		>
@@ -275,12 +288,12 @@
 	<!-- Right: Save + Export -->
 	<div class="flex items-center gap-2">
 		<button
-			class="rounded p-1.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+			class="rounded-xl p-1.5 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white border border-transparent hover:border-white/10"
 			onclick={() => (showExportModal = true)}
 			aria-label="Export"
 			title="Export"
 		>
-			<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+			<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -291,16 +304,16 @@
 		</button>
 
 		<Button variant="primary" size="sm" onclick={handleSave} disabled={isSaving}>
-			{isSaving ? 'Saving...' : 'Save'}
+			{isSaving ? 'Saving...' : 'Save Changes'}
 		</Button>
 	</div>
 </div>
 
 <!-- Export Modal -->
 <Modal open={showExportModal} title="Export Diagram" onclose={() => (showExportModal = false)}>
-	<div class="grid grid-cols-2 gap-3">
+	<div class="grid grid-cols-2 gap-3 p-4">
 		<button
-			class="flex flex-col items-center gap-2 rounded-lg border border-slate-700 p-4 transition-colors hover:border-indigo-500 hover:bg-slate-800"
+			class="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-surface/30 p-4 transition-all hover:border-white/20 hover:bg-surface/80 hover:shadow-lg hover:shadow-black/20"
 			onclick={() => handleExport('png')}
 		>
 			<svg class="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -312,10 +325,10 @@
 				/></svg
 			>
 			<span class="text-sm font-medium text-white">PNG</span>
-			<span class="text-xs text-slate-500">Raster image</span>
+			<span class="text-xs text-slate-400">Raster image</span>
 		</button>
 		<button
-			class="flex flex-col items-center gap-2 rounded-lg border border-slate-700 p-4 transition-colors hover:border-indigo-500 hover:bg-slate-800"
+			class="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-surface/30 p-4 transition-all hover:border-white/20 hover:bg-surface/80 hover:shadow-lg hover:shadow-black/20"
 			onclick={() => handleExport('jpg')}
 		>
 			<svg class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -327,10 +340,10 @@
 				/></svg
 			>
 			<span class="text-sm font-medium text-white">JPG</span>
-			<span class="text-xs text-slate-500">Compact image</span>
+			<span class="text-xs text-slate-400">Compact image</span>
 		</button>
 		<button
-			class="flex flex-col items-center gap-2 rounded-lg border border-slate-700 p-4 transition-colors hover:border-indigo-500 hover:bg-slate-800"
+			class="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-surface/30 p-4 transition-all hover:border-white/20 hover:bg-surface/80 hover:shadow-lg hover:shadow-black/20"
 			onclick={() => handleExport('webp')}
 		>
 			<svg class="h-8 w-8 text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -342,13 +355,13 @@
 				/></svg
 			>
 			<span class="text-sm font-medium text-white">WebP</span>
-			<span class="text-xs text-slate-500">Modern format</span>
+			<span class="text-xs text-slate-400">Modern format</span>
 		</button>
 		<button
-			class="flex flex-col items-center gap-2 rounded-lg border border-slate-700 p-4 transition-colors hover:border-indigo-500 hover:bg-slate-800"
+			class="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-surface/30 p-4 transition-all hover:border-white/20 hover:bg-surface/80 hover:shadow-lg hover:shadow-black/20"
 			onclick={() => handleExport('svg')}
 		>
-			<svg class="h-8 w-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+			<svg class="h-8 w-8 text-accent-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
 				><path
 					stroke-linecap="round"
 					stroke-linejoin="round"
@@ -357,10 +370,10 @@
 				/></svg
 			>
 			<span class="text-sm font-medium text-white">SVG</span>
-			<span class="text-xs text-slate-500">Vector image</span>
+			<span class="text-xs text-slate-400">Vector image</span>
 		</button>
 		<button
-			class="flex flex-col items-center gap-2 rounded-lg border border-slate-700 p-4 transition-colors hover:border-indigo-500 hover:bg-slate-800"
+			class="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-surface/30 p-4 transition-all hover:border-white/20 hover:bg-surface/80 hover:shadow-lg hover:shadow-black/20"
 			onclick={() => handleExport('json')}
 		>
 			<svg class="h-8 w-8 text-amber-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -372,10 +385,10 @@
 				/></svg
 			>
 			<span class="text-sm font-medium text-white">JSON</span>
-			<span class="text-xs text-slate-500">Semantic model</span>
+			<span class="text-xs text-slate-400">Semantic model</span>
 		</button>
 		<button
-			class="flex flex-col items-center gap-2 rounded-lg border border-slate-700 p-4 transition-colors hover:border-indigo-500 hover:bg-slate-800"
+			class="flex flex-col items-center gap-2 rounded-xl border border-white/5 bg-surface/30 p-4 transition-all hover:border-white/20 hover:bg-surface/80 hover:shadow-lg hover:shadow-black/20"
 			onclick={() => handleExport('dsl')}
 		>
 			<svg class="h-8 w-8 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"
@@ -387,7 +400,7 @@
 				/></svg
 			>
 			<span class="text-sm font-medium text-white">DSL Text</span>
-			<span class="text-xs text-slate-500">GraDiOl format</span>
+			<span class="text-xs text-slate-400">GraDiOl format</span>
 		</button>
 	</div>
 </Modal>

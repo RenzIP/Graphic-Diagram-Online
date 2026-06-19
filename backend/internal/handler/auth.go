@@ -10,7 +10,9 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/dto"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
 )
@@ -24,6 +26,52 @@ type AuthHandler struct {
 // NewAuthHandler creates a new AuthHandler.
 func NewAuthHandler(authSvc *service.AuthService, cfg *config.Config) *AuthHandler {
 	return &AuthHandler{authSvc: authSvc, cfg: cfg}
+}
+
+// Register handles POST /api/auth/register for credential-based auth.
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
+	var req dto.RegisterReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, pkg.ErrBadRequest.WithMessage("invalid request body"))
+	}
+	if appErr := pkg.Validate(req); appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	user, appErr := h.authSvc.Register(c.Context(), req)
+	if appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	resp, err := h.buildAuthSession(user)
+	if err != nil {
+		return handleError(c, pkg.ErrInternal.WithMessage("failed to sign auth token").WithDetails(err.Error()))
+	}
+
+	return pkg.WriteSuccess(c, fiber.StatusCreated, resp)
+}
+
+// Login handles POST /api/auth/login for credential-based auth.
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	var req dto.LoginReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, pkg.ErrBadRequest.WithMessage("invalid request body"))
+	}
+	if appErr := pkg.Validate(req); appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	user, appErr := h.authSvc.Login(c.Context(), req)
+	if appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	resp, err := h.buildAuthSession(user)
+	if err != nil {
+		return handleError(c, pkg.ErrInternal.WithMessage("failed to sign auth token").WithDetails(err.Error()))
+	}
+
+	return pkg.WriteSuccess(c, fiber.StatusOK, resp)
 }
 
 // ─── Google OAuth ───────────────────────────────────────
@@ -150,6 +198,23 @@ func (h *AuthHandler) completeOAuth(c *fiber.Ctx, providerUserID, email, fullNam
 	// Redirect to frontend callback with token
 	callbackURL := fmt.Sprintf("%s/auth/callback?token=%s", h.cfg.FrontendURL, token)
 	return c.Redirect(callbackURL, fiber.StatusTemporaryRedirect)
+}
+
+func (h *AuthHandler) buildAuthSession(user *model.UserProfile) (*dto.AuthCallbackResp, error) {
+	token, err := h.signJWT(user.ID, user.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	return &dto.AuthCallbackResp{
+		Token: token,
+		User: dto.AuthUserResp{
+			ID:        user.ID.String(),
+			Email:     user.Email,
+			FullName:  user.FullName,
+			AvatarURL: user.AvatarURL,
+		},
+	}, nil
 }
 
 // signJWT creates a signed HS256 JWT with sub + email claims, valid for 7 days.

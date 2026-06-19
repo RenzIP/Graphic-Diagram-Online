@@ -13,7 +13,7 @@
 </script>
 
 <div
-	class="overflow-hidden rounded-2xl border border-slate-800 bg-slate-900 shadow-xl shadow-slate-950/50 {className}"
+	class="glass-card rounded-2xl overflow-hidden transition-all duration-300 {className}"
 	{...rest}
 >
 	{@render children?.()}

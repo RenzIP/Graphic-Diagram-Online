@@ -2,123 +2,91 @@
 	import AppSidebar from '$lib/components/layout/AppSidebar.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Input from '$lib/components/ui/Input.svelte';
+	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { workspacesApi } from '$lib/api/workspaces';
 	import { projectsApi } from '$lib/api/projects';
-	import { documentsApi } from '$lib/api/documents';
-	import type { Workspace, Project, DiagramType } from '$lib/api/types';
-	import { DIAGRAM_TYPES } from '$lib/utils/constants';
+	import type { Workspace, Project } from '$lib/api/types';
 	import { onMount } from 'svelte';
+	import { formatDateTime, truncateMiddle } from '$lib/utils/formatters';
+	import { showToast } from '$lib/utils/toast';
+	import { getApiErrorMessage } from '$lib/utils/validation';
 
 	let workspace = $state<Workspace | null>(null);
 	let loading = $state(true);
 	let projects = $state<Project[]>([]);
-
-	// Project creation
-	let showNewProjectModal = $state(false);
-	let newProjectName = $state('');
-	let newProjectDescription = $state('');
-	let creatingProject = $state(false);
-
-	// Document creation
-	let showNewDocModal = $state(false);
-	let newDocProjectId = $state('');
-	let newDocTitle = $state('');
-	let creatingDoc = $state(false);
-
-	function timeAgo(dateStr: string): string {
-		const now = new Date();
-		const date = new Date(dateStr);
-		const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-		if (diff < 60) return 'just now';
-		if (diff < 3600) return `${Math.floor(diff / 60)} mins ago`;
-		if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-		return `${Math.floor(diff / 86400)} days ago`;
-	}
+	let searchQuery = $state('');
+	let filterMode = $state<'all' | 'with-documents' | 'without-documents'>('all');
+	let sortMode = $state<'updated-desc' | 'name-asc' | 'docs-desc'>('updated-desc');
 
 	onMount(async () => {
+		loadWorkspaceProjects();
+	});
+
+	async function loadWorkspaceProjects() {
 		const workspaceId = $page.params.id;
 		try {
-			// Fetch workspace list to find current one, and projects in parallel
 			const [wsRes, projRes] = await Promise.all([
 				workspacesApi.list({ per_page: 100 }),
-				projectsApi.listByWorkspace(workspaceId!, { per_page: 50 })
+				projectsApi.listByWorkspace(workspaceId!, { per_page: 100 })
 			]);
-			workspace = wsRes.data.find((w) => w.id === workspaceId) ?? null;
+			workspace = wsRes.data.find((item) => item.id === workspaceId) ?? null;
 			projects = projRes.data;
 		} catch (e) {
-			console.error('Failed to load workspace:', e);
+			showToast(getApiErrorMessage(e, 'Gagal memuat list project.'), 'error');
 			projects = [];
 		} finally {
 			loading = false;
 		}
-	});
-
-	async function createProject() {
-		if (!newProjectName.trim()) return;
-		const workspaceId = $page.params.id;
-		creatingProject = true;
-		try {
-			const project = await projectsApi.create({
-				workspace_id: workspaceId!,
-				name: newProjectName.trim(),
-				description: newProjectDescription.trim() || undefined
-			});
-			projects = [...projects, project];
-			showNewProjectModal = false;
-			newProjectName = '';
-			newProjectDescription = '';
-		} catch (e) {
-			console.error('Failed to create project:', e);
-		} finally {
-			creatingProject = false;
-		}
 	}
 
-	async function deleteProject(id: string, name: string) {
-		if (!confirm(`Delete project "${name}" and all its documents?`)) return;
-		try {
-			await projectsApi.delete(id);
-			projects = projects.filter((p) => p.id !== id);
-		} catch (e) {
-			console.error('Failed to delete project:', e);
-		}
+	let filteredProjects = $derived(
+		[...projects]
+			.filter((project) => {
+				const matchesSearch =
+					project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+					(project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+					project.id.toLowerCase().includes(searchQuery.toLowerCase());
+
+				const matchesFilter =
+					filterMode === 'all' ||
+					(filterMode === 'with-documents' && project.document_count > 0) ||
+					(filterMode === 'without-documents' && project.document_count === 0);
+
+				return matchesSearch && matchesFilter;
+			})
+			.sort((left, right) => {
+				if (sortMode === 'name-asc') {
+					return left.name.localeCompare(right.name);
+				}
+
+				if (sortMode === 'docs-desc') {
+					return right.document_count - left.document_count;
+				}
+
+				return new Date(right.updated_at).getTime() - new Date(left.updated_at).getTime();
+			})
+	);
+
+	function openProjectCreate() {
+		goto(`/workspace/${$page.params.id}/projects/create`);
 	}
 
-	async function createDocument(typeId: string) {
-		if (!newDocProjectId) return;
-		const workspaceId = $page.params.id;
-		creatingDoc = true;
-		try {
-			const doc = await documentsApi.create({
-				workspace_id: workspaceId!,
-				project_id: newDocProjectId,
-				title: newDocTitle.trim() || 'Untitled',
-				diagram_type: typeId as DiagramType
-			});
-			showNewDocModal = false;
-			newDocTitle = '';
-			window.location.href = `/editor/${doc.id}`;
-		} catch (e) {
-			console.error('Failed to create document:', e);
-		} finally {
-			creatingDoc = false;
-		}
+	function openProjectDetail(projectId: string) {
+		goto(`/workspace/${$page.params.id}/projects/${projectId}`);
 	}
 </script>
 
-<div class="flex h-screen overflow-hidden bg-slate-950 text-slate-200">
+<div class="flex h-screen overflow-hidden bg-background text-text-primary font-inter">
 	<AppSidebar />
 
-	<main class="flex min-h-0 flex-1 flex-col overflow-hidden">
+	<main class="flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
 		<!-- Header -->
 		<header
-			class="flex h-16 shrink-0 items-center justify-between border-b border-slate-800 bg-slate-950 px-8"
+			class="flex h-16 shrink-0 items-center justify-between border-b border-white/5 bg-background/80 px-8 backdrop-blur-xl"
 		>
 			<div class="flex items-center gap-4">
-				<nav class="flex items-center text-sm text-slate-500">
+				<nav class="flex items-center text-sm text-text-secondary">
 					<a href="/dashboard" class="transition-colors hover:text-white">Dashboard</a>
 					<svg class="mx-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 						<path
@@ -128,13 +96,13 @@
 							d="M9 5l7 7-7 7"
 						/>
 					</svg>
-					<span class="font-medium text-white">{workspace?.name ?? 'Workspace'}</span>
+					<span class="font-medium text-white font-outfit">{workspace?.name ?? 'Workspace'}</span>
 				</nav>
 			</div>
 
 			<div class="flex items-center gap-3">
 				{#if workspace?.role === 'owner' || workspace?.role === 'editor'}
-					<Button variant="primary" size="sm" onclick={() => (showNewProjectModal = true)}>
+					<Button variant="primary" size="sm" onclick={openProjectCreate}>
 						<svg class="mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path
 								stroke-linecap="round"
@@ -150,191 +118,206 @@
 		</header>
 
 		<!-- Content -->
-		<div class="flex-1 overflow-y-auto p-8">
+		<div class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
 			{#if workspace?.description}
-				<p class="mb-6 text-sm text-slate-400">{workspace.description}</p>
+				<p class="mb-6 text-sm text-text-secondary max-w-3xl">{workspace.description}</p>
 			{/if}
 
-			<div class="mb-6 flex items-center justify-between">
-				<h1 class="text-2xl font-bold text-white">Projects</h1>
-				<span class="text-sm text-slate-500"
-					>{projects.length} project{projects.length !== 1 ? 's' : ''}</span
-				>
+			<div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+				<div>
+					<h1 class="text-2xl font-bold text-white tracking-tight font-outfit">Project List</h1>
+					<p class="mt-1 text-sm text-text-tertiary">
+						Manage your workspace projects and their documents.
+					</p>
+				</div>
+				<div class="grid gap-3 sm:grid-cols-3 xl:w-[42rem]">
+					<input
+						type="search"
+						placeholder="Search projects..."
+						bind:value={searchQuery}
+						class="w-full rounded-xl border border-white/10 bg-surface/50 px-4 py-2 text-sm text-white placeholder-text-tertiary focus:border-primary/50 focus:ring-1 focus:ring-primary/50 focus:outline-none transition-colors"
+					/>
+					<select
+						bind:value={filterMode}
+						class="w-full rounded-xl border border-white/10 bg-surface/50 px-4 py-2 text-sm text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 focus:outline-none transition-colors appearance-none"
+					>
+						<option value="all" class="bg-surface">All Projects</option>
+						<option value="with-documents" class="bg-surface">Has Documents</option>
+						<option value="without-documents" class="bg-surface">No Documents</option>
+					</select>
+					<select
+						bind:value={sortMode}
+						class="w-full rounded-xl border border-white/10 bg-surface/50 px-4 py-2 text-sm text-white focus:border-primary/50 focus:ring-1 focus:ring-primary/50 focus:outline-none transition-colors appearance-none"
+					>
+						<option value="updated-desc" class="bg-surface">Recently Updated</option>
+						<option value="name-asc" class="bg-surface">Name A-Z</option>
+						<option value="docs-desc" class="bg-surface">Most Documents</option>
+					</select>
+				</div>
 			</div>
 
 			{#if loading}
 				<div class="flex items-center justify-center py-16">
 					<div
-						class="h-8 w-8 animate-spin rounded-full border-2 border-slate-700 border-t-indigo-500"
+						class="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-primary"
 					></div>
-					<span class="ml-3 text-sm text-slate-500">Loading projects...</span>
+					<span class="ml-3 text-sm text-text-secondary">Loading projects...</span>
 				</div>
+			{:else if filteredProjects.length === 0}
+				<Card class="p-10 text-center border-dashed border-white/10 bg-surface/20 shadow-none">
+					<div class="mx-auto flex h-16 w-16 items-center justify-center rounded-xl bg-card border border-white/5 text-text-secondary">
+						<svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+							/>
+						</svg>
+					</div>
+					<h2 class="mt-4 text-lg font-semibold text-white">No projects found</h2>
+					<p class="mt-2 text-sm text-text-tertiary">
+						{searchQuery || filterMode !== 'all'
+							? 'Try adjusting your filters or search query.'
+							: 'There are no projects in this workspace yet. Create one to get started.'}
+					</p>
+					{#if workspace?.role === 'owner' || workspace?.role === 'editor'}
+						<div class="mt-6">
+							<Button variant="primary" onclick={openProjectCreate}>Tambah Project</Button>
+						</div>
+					{/if}
+				</Card>
 			{:else}
-				<div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-					{#each projects as project}
-						<Card
-							class="group relative cursor-pointer overflow-hidden p-0 transition-colors hover:border-slate-600"
-						>
-							<div
-								class="h-2 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 transition-opacity group-hover:opacity-100"
-							></div>
-							<div class="p-6">
-								<div class="mb-4 flex items-start justify-between">
-									<div
-										class="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-400"
-									>
-										<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
-											/>
-										</svg>
-									</div>
-									<div class="flex gap-1">
-										<button
-											class="rounded p-1 text-slate-500 transition-colors hover:bg-slate-800 hover:text-indigo-400"
-											title="Add document"
-											onclick={(e) => {
-												e.stopPropagation();
-												newDocProjectId = project.id;
-												showNewDocModal = true;
-											}}
-										>
-											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M12 4v16m8-8H4"
-												/>
-											</svg>
-										</button>
-										<button
-											class="rounded p-1 text-slate-500 transition-colors hover:bg-slate-800 hover:text-red-400"
-											title="Delete project"
-											onclick={(e) => {
-												e.stopPropagation();
-												deleteProject(project.id, project.name);
-											}}
-										>
-											<svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-												/>
-											</svg>
-										</button>
-									</div>
+				<div class="mb-4 rounded-xl border border-white/5 bg-surface/30 p-4 text-xs text-text-tertiary">
+					Showing <span class="text-white">{filteredProjects.length}</span> of {projects.length} projects.
+				</div>
+
+				<div class="hidden overflow-hidden rounded-2xl border border-white/10 bg-surface/50 xl:block">
+					<div class="overflow-x-auto">
+						<table class="min-w-full divide-y divide-white/5">
+							<thead class="bg-surface/80 text-left text-xs uppercase tracking-[0.25em] text-text-tertiary backdrop-blur-md">
+								<tr>
+									<th class="px-6 py-4 font-medium">ID</th>
+									<th class="px-6 py-4 font-medium">Name</th>
+									<th class="px-6 py-4 font-medium">Workspace</th>
+									<th class="px-6 py-4 font-medium">Description</th>
+									<th class="px-6 py-4 font-medium">Docs</th>
+									<th class="px-6 py-4 font-medium">Created</th>
+									<th class="px-6 py-4 font-medium">Updated</th>
+									<th class="px-6 py-4 font-medium text-right">Actions</th>
+								</tr>
+							</thead>
+							<tbody class="divide-y divide-white/5 text-sm text-text-primary bg-background/30">
+								{#each filteredProjects as project}
+									<tr class="hover:bg-surface/50 transition-colors group">
+										<td class="px-6 py-4 font-mono text-[11px] text-text-tertiary">
+											{truncateMiddle(project.id, 16)}
+										</td>
+										<td class="px-6 py-4 font-medium text-white group-hover:text-primary transition-colors">{project.name}</td>
+										<td class="px-6 py-4 text-text-secondary">{workspace?.name ?? '-'}</td>
+										<td class="max-w-[200px] px-6 py-4 text-text-tertiary truncate">
+											{project.description || 'No description'}
+										</td>
+										<td class="px-6 py-4">
+											<span class="inline-flex items-center justify-center rounded-full bg-white/5 border border-white/10 px-2.5 py-1 text-xs text-text-secondary min-w-[2rem]">
+												{project.document_count}
+											</span>
+										</td>
+										<td class="px-6 py-4 text-text-tertiary text-xs">{formatDateTime(project.created_at)}</td>
+										<td class="px-6 py-4 text-text-tertiary text-xs">{formatDateTime(project.updated_at)}</td>
+										<td class="px-6 py-4 text-right">
+											<div class="flex flex-wrap justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+												<Button
+													size="sm"
+													variant="secondary"
+													href={`/workspace/${$page.params.id}/projects/${project.id}`}
+													class="bg-surface border-white/10 hover:bg-white/10"
+												>
+													View
+												</Button>
+												{#if workspace?.role === 'owner' || workspace?.role === 'editor'}
+													<Button
+														size="sm"
+														variant="ghost"
+														href={`/workspace/${$page.params.id}/projects/edit/${project.id}`}
+														class="text-text-secondary hover:text-white"
+													>
+														Edit
+													</Button>
+												{/if}
+												{#if workspace?.role === 'owner'}
+													<Button
+														size="sm"
+														variant="ghost"
+														href={`/workspace/${$page.params.id}/projects/delete/${project.id}`}
+														class="text-error hover:text-white hover:bg-error/20"
+													>
+														Delete
+													</Button>
+												{/if}
+											</div>
+										</td>
+									</tr>
+								{/each}
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 gap-4 xl:hidden">
+					{#each filteredProjects as project}
+						<Card class="p-5 border-white/10 bg-surface/50 hover:border-primary/30 transition-colors">
+							<div class="flex flex-wrap items-start justify-between gap-3">
+								<div>
+									<p class="text-xs uppercase tracking-[0.3em] text-text-tertiary">
+										{truncateMiddle(project.id, 16)}
+									</p>
+									<h3 class="mt-2 text-lg font-semibold text-white">{project.name}</h3>
 								</div>
-								<h3
-									class="mb-1 text-lg font-bold text-white transition-colors group-hover:text-indigo-400"
+								<span class="rounded-full bg-white/5 border border-white/10 px-3 py-1 text-[11px] font-medium text-text-secondary">
+									{project.document_count} docs
+								</span>
+							</div>
+							<p class="mt-3 text-sm text-text-secondary">{project.description || 'No description'}</p>
+							<div class="mt-4 grid gap-2 text-[13px] text-text-tertiary sm:grid-cols-2 bg-background/50 p-3 rounded-lg">
+								<p>Workspace: <span class="text-text-secondary">{workspace?.name ?? '-'}</span></p>
+								<p>Created: <span class="text-text-secondary">{formatDateTime(project.created_at)}</span></p>
+								<p>Updated: <span class="text-text-secondary">{formatDateTime(project.updated_at)}</span></p>
+								<p>Role: <span class="text-text-secondary uppercase text-[10px] tracking-wider">{workspace?.role ?? '-'}</span></p>
+							</div>
+							<div class="mt-5 flex flex-wrap gap-2 pt-4 border-t border-white/5">
+								<Button
+									size="sm"
+									variant="secondary"
+									onclick={() => openProjectDetail(project.id)}
+									class="bg-background border-white/10"
 								>
-									{project.name}
-								</h3>
-								{#if project.description}
-									<p class="mb-2 line-clamp-2 text-sm text-slate-400">{project.description}</p>
-								{/if}
-								<div class="flex items-center gap-4 text-sm text-slate-500">
-									<span
-										>{project.document_count} document{project.document_count !== 1
-											? 's'
-											: ''}</span
+									View Details
+								</Button>
+								{#if workspace?.role === 'owner' || workspace?.role === 'editor'}
+									<Button
+										size="sm"
+										variant="ghost"
+										href={`/workspace/${$page.params.id}/projects/edit/${project.id}`}
 									>
-									<span>Updated {timeAgo(project.updated_at)}</span>
-								</div>
+										Edit
+									</Button>
+								{/if}
+								{#if workspace?.role === 'owner'}
+									<Button
+										size="sm"
+										variant="ghost"
+										href={`/workspace/${$page.params.id}/projects/delete/${project.id}`}
+										class="text-error hover:text-white hover:bg-error/20"
+									>
+										Delete
+									</Button>
+								{/if}
 							</div>
 						</Card>
 					{/each}
-
-					<!-- Create New Project Card -->
-					<button
-						class="flex h-full min-h-[160px] cursor-pointer flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-slate-800 p-6 text-slate-500 transition-all hover:border-indigo-500/50 hover:bg-slate-900/50 hover:text-indigo-400"
-						onclick={() => (showNewProjectModal = true)}
-					>
-						<div class="flex h-12 w-12 items-center justify-center rounded-full bg-slate-800">
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 4v16m8-8H4"
-								/>
-							</svg>
-						</div>
-						<span class="font-medium">Create New Project</span>
-					</button>
 				</div>
 			{/if}
 		</div>
 	</main>
 </div>
-
-<!-- New Project Modal -->
-<Modal bind:open={showNewProjectModal}>
-	<div class="p-6">
-		<h3 class="mb-4 text-lg font-semibold text-white">Create New Project</h3>
-		<form
-			class="space-y-3"
-			onsubmit={(e) => {
-				e.preventDefault();
-				createProject();
-			}}
-		>
-			<Input label="Project Name" placeholder="My Project" bind:value={newProjectName} />
-			<div>
-				<label for="proj-desc" class="mb-1 block text-sm text-slate-400"
-					>Description (optional)</label
-				>
-				<textarea
-					id="proj-desc"
-					bind:value={newProjectDescription}
-					rows={3}
-					placeholder="What is this project about?"
-					class="w-full rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:ring-2 focus:ring-indigo-500/50 focus:outline-none"
-				></textarea>
-			</div>
-			<div class="flex justify-end gap-2 pt-2">
-				<Button variant="ghost" size="sm" onclick={() => (showNewProjectModal = false)}
-					>Cancel</Button
-				>
-				<Button
-					variant="primary"
-					size="sm"
-					type="submit"
-					disabled={creatingProject || !newProjectName.trim()}
-				>
-					{creatingProject ? 'Creating...' : 'Create Project'}
-				</Button>
-			</div>
-		</form>
-	</div>
-</Modal>
-
-<!-- New Document in Project Modal -->
-<Modal bind:open={showNewDocModal}>
-	<div class="p-6">
-		<h3 class="mb-4 text-lg font-semibold text-white">Create Document</h3>
-		<div class="mb-4">
-			<Input label="Title" placeholder="Untitled" bind:value={newDocTitle} />
-		</div>
-		<div>
-			<label class="mb-2 block text-sm text-slate-400">Diagram Type</label>
-			<div class="grid grid-cols-3 gap-2">
-				{#each DIAGRAM_TYPES as dt}
-					<button
-						class="flex flex-col items-center rounded-lg border border-slate-700 bg-slate-800 p-3 text-center transition-colors hover:border-indigo-500 hover:bg-slate-700"
-						onclick={() => createDocument(dt.id)}
-						disabled={creatingDoc}
-					>
-						<span class="mb-1 text-xl">{dt.icon}</span>
-						<span class="text-xs text-slate-300">{dt.name}</span>
-					</button>
-				{/each}
-			</div>
-		</div>
-	</div>
-</Modal>

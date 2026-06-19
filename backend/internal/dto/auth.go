@@ -1,5 +1,19 @@
 package dto
 
+// LoginReq is the body for POST /api/auth/login.
+type LoginReq struct {
+	Email    string `json:"email" validate:"required,email,max=255"`
+	Password string `json:"password" validate:"required,min=6,max=72"`
+}
+
+// RegisterReq is the body for POST /api/auth/register.
+type RegisterReq struct {
+	FullName string `json:"full_name" validate:"required,min=3,max=100"`
+	Email    string `json:"email" validate:"required,email,max=255"`
+	Password string `json:"password" validate:"required,min=6,max=72"`
+	Role     string `json:"role" validate:"omitempty,oneof=admin user"`
+}
+
 // AuthCallbackReq is the body for POST /api/auth/callback.
 type AuthCallbackReq struct {
 	AccessToken  string `json:"access_token"  validate:"required"`

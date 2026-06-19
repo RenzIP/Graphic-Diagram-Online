@@ -44,6 +44,7 @@ export interface Node {
 		gradient?: boolean;
 	};
 	locked?: boolean;
+	rotation?: number;
 }
 
 export interface Edge {
@@ -83,7 +84,8 @@ export function toDocumentContent(state: DocumentState): DocumentContent {
 				...(n.data ?? {}),
 				...(n.width != null ? { width: n.width } : {}),
 				...(n.height != null ? { height: n.height } : {}),
-				...(n.locked != null ? { locked: n.locked } : {})
+				...(n.locked != null ? { locked: n.locked } : {}),
+				...(n.rotation != null ? { rotation: n.rotation } : {})
 			}
 		})),
 		edges: state.edges.map((e) => ({
@@ -139,9 +141,10 @@ export function fromApiDocument(content: DocumentContent, view: DocumentView): D
 			...(props.width != null ? { width: props.width as number } : {}),
 			...(props.height != null ? { height: props.height as number } : {}),
 			...(props.locked != null ? { locked: props.locked as boolean } : {}),
+			...(props.rotation != null ? { rotation: props.rotation as number } : {}),
 			...(nodeStyle ? { style: nodeStyle } : {}),
 			data: Object.fromEntries(
-				Object.entries(props).filter(([k]) => !['width', 'height', 'locked'].includes(k))
+				Object.entries(props).filter(([k]) => !['width', 'height', 'locked', 'rotation'].includes(k))
 			)
 		};
 	});

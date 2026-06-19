@@ -105,7 +105,7 @@
 		style="left: {toolbarPosition.x}px; top: {toolbarPosition.y}px;"
 	>
 		<div
-			class="pointer-events-auto flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 p-1.5 shadow-xl"
+			class="pointer-events-auto flex items-center gap-2 rounded-xl border border-white/10 bg-surface/90 backdrop-blur-md p-1.5 shadow-xl"
 		>
 			<!-- Colors -->
 			<div class="flex gap-1">
@@ -124,13 +124,13 @@
 				{/each}
 			</div>
 
-			<div class="mx-1 h-4 w-px bg-slate-600"></div>
+			<div class="mx-1 h-4 w-px bg-white/10"></div>
 
 			{#if selectedNodes.length > 1}
 				<!-- Alignment -->
 				<button
 					onclick={() => align('left')}
-					class="p-1 text-slate-400 hover:text-white"
+					class="p-1 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white rounded-lg"
 					title="Align Left"
 				>
 					<svg
@@ -150,7 +150,7 @@
 				</button>
 				<button
 					onclick={() => align('center')}
-					class="p-1 text-slate-400 hover:text-white"
+					class="p-1 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white rounded-lg"
 					title="Align Center"
 				>
 					<svg
@@ -170,7 +170,7 @@
 				</button>
 				<button
 					onclick={() => align('right')}
-					class="p-1 text-slate-400 hover:text-white"
+					class="p-1 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white rounded-lg"
 					title="Align Right"
 				>
 					<svg
@@ -188,12 +188,12 @@
 						/></svg
 					>
 				</button>
-				<div class="mx-1 h-4 w-px bg-slate-600"></div>
+				<div class="mx-1 h-4 w-px bg-white/10"></div>
 			{/if}
 
 			<!-- Actions -->
 			<button
-				class="p-1 text-slate-400 hover:text-white"
+				class="p-1 text-text-tertiary transition-colors hover:bg-white/5 hover:text-white rounded-lg"
 				onclick={duplicateNodes}
 				title="Duplicate"
 			>
@@ -211,7 +211,7 @@
 					/></svg
 				>
 			</button>
-			<button class="p-1 text-red-400 hover:text-red-200" onclick={deleteNodes} title="Delete">
+			<button class="p-1 text-error hover:text-white hover:bg-error/20 rounded-lg transition-colors" onclick={deleteNodes} title="Delete">
 				<svg
 					width="14"
 					height="14"
