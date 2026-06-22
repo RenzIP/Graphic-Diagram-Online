@@ -1,0 +1,20 @@
+{
+	"/(auth)": [],
+	"/(app)": [],
+	"/": [],
+	"/auth/callback": [],
+	"/(app)/dashboard": [],
+	"/demo": [
+		"src/routes/demo/+page.server.ts"
+	],
+	"/(app)/editor/[id]": [],
+	"/(auth)/login": [],
+	"/(auth)/register": [],
+	"/(app)/settings": [],
+	"/(app)/team": [],
+	"/(app)/workspace/[id]": [],
+	"/(app)/workspace/[id]/projects/create": [],
+	"/(app)/workspace/[id]/projects/delete/[projectId]": [],
+	"/(app)/workspace/[id]/projects/edit/[projectId]": [],
+	"/(app)/workspace/[id]/projects/[projectId]": []
+}

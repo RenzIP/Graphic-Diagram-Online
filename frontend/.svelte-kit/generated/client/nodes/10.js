@@ -1,0 +1,1 @@
+export { default as component } from "../../../../src/routes/(app)/workspace/[id]/projects/create/+page.svelte";

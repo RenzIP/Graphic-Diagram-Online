@@ -1,0 +1,1 @@
+function i(t){if(!t)return"-";const e=new Date(t);return Number.isNaN(e.getTime())?"-":new Intl.DateTimeFormat("id-ID",{dateStyle:"medium",timeStyle:"short"}).format(e)}function o(t,e=16){if(t.length<=e)return t;const n=Math.ceil((e-3)/2),r=Math.floor((e-3)/2);return`${t.slice(0,n)}...${t.slice(t.length-r)}`}export{i as f,o as t};

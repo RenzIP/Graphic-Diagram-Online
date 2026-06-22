@@ -1,0 +1,1 @@
+import{a as t}from"./D-1Qc4O4.js";const o={listByWorkspace:(e,p)=>t.get(`/workspaces/${e}/projects`,{params:p?{page:String(p.page??1),per_page:String(p.per_page??20)}:void 0}),create:e=>t.post("/projects",e),update:(e,p)=>t.put(`/projects/${e}`,p),delete:e=>t.delete(`/projects/${e}`)};export{o as p};

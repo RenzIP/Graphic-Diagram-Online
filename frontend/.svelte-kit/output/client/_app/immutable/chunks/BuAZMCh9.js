@@ -1,0 +1,1 @@
+function i(s){return/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)}function n(s,e){if(typeof s=="object"&&s!==null&&"message"in s){const t=s.message;if(typeof t=="string"&&t.trim())return t}return e}export{n as g,i};
