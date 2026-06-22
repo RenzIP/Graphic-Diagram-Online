@@ -14,26 +14,26 @@ import (
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/repository"
 )
 
-// AuthService handles authentication-related business logic.
 type AuthService struct {
 	userRepo *repository.UserRepo
 }
 
-// NewAuthService creates a new AuthService.
 func NewAuthService(userRepo *repository.UserRepo) *AuthService {
 	return &AuthService{userRepo: userRepo}
 }
 
-// GetProfile returns the current user's profile by their JWT sub claim.
 func (s *AuthService) GetProfile(ctx context.Context, userID uuid.UUID) (*dto.AuthMeResp, *pkg.AppError) {
 	user, appErr := s.userRepo.FindByID(ctx, userID)
 	if appErr != nil {
 		return nil, appErr
 	}
+	if user == nil {
+		return nil, pkg.ErrNotFound.WithMessage("user not found")
+	}
+
 	return userResponse(user), nil
 }
 
-// Register creates a password-auth user and stores only the bcrypt hash.
 func (s *AuthService) Register(ctx context.Context, req dto.RegisterReq) (*model.UserProfile, *pkg.AppError) {
 	req.Username = strings.ToLower(strings.TrimSpace(req.Username))
 	req.Role = strings.ToLower(strings.TrimSpace(req.Role))
@@ -45,11 +45,11 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterReq) (*model
 		return nil, appErr
 	}
 
-	existingUsername, appErr := s.userRepo.FindByUsername(ctx, req.Username)
+	existingUser, appErr := s.userRepo.FindByUsername(ctx, req.Username)
 	if appErr != nil {
 		return nil, appErr
 	}
-	if existingUsername != nil {
+	if existingUser != nil {
 		return nil, pkg.ErrConflict.WithMessage("username already registered")
 	}
 
@@ -58,11 +58,10 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterReq) (*model
 		return nil, pkg.ErrInternal.WithMessage("failed to hash password")
 	}
 
-	username := req.Username
 	hash := string(passwordHash)
 	user := &model.UserProfile{
 		ID:        uuid.New(),
-		Username:  username,
+		Username:  req.Username,
 		Password:  &hash,
 		Role:      req.Role,
 		CreatedAt: time.Now(),
@@ -70,10 +69,10 @@ func (s *AuthService) Register(ctx context.Context, req dto.RegisterReq) (*model
 	if appErr := s.userRepo.Create(ctx, user); appErr != nil {
 		return nil, appErr
 	}
+
 	return user, nil
 }
 
-// Login authenticates a username/email and password pair with bcrypt.
 func (s *AuthService) Login(ctx context.Context, req dto.LoginReq) (*model.UserProfile, *pkg.AppError) {
 	req.Identifier = strings.ToLower(strings.TrimSpace(req.Identifier))
 	if appErr := pkg.Validate(req); appErr != nil {
@@ -94,7 +93,6 @@ func (s *AuthService) Login(ctx context.Context, req dto.LoginReq) (*model.UserP
 	return user, nil
 }
 
-// ChangePassword verifies the current password and replaces it with a new bcrypt hash.
 func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, req dto.ChangePasswordReq) *pkg.AppError {
 	if appErr := pkg.Validate(req); appErr != nil {
 		return appErr
@@ -103,6 +101,9 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 	user, appErr := s.userRepo.FindByID(ctx, userID)
 	if appErr != nil {
 		return appErr
+	}
+	if user == nil {
+		return pkg.ErrNotFound.WithMessage("user not found")
 	}
 	if user.Password == nil || *user.Password == "" {
 		return pkg.ErrBadRequest.WithMessage("password login is not available for this account")
@@ -119,9 +120,25 @@ func (s *AuthService) ChangePassword(ctx context.Context, userID uuid.UUID, req 
 	return s.userRepo.UpdatePassword(ctx, userID, string(passwordHash))
 }
 
-// UserResponse maps a user model into a public auth response.
 func (s *AuthService) UserResponse(user *model.UserProfile) dto.AuthUserResp {
 	return *userResponse(user)
+}
+
+func (s *AuthService) UpsertProfile(ctx context.Context, userID uuid.UUID, email string, fullName, avatarURL *string) *pkg.AppError {
+	email = strings.ToLower(strings.TrimSpace(email))
+	username := usernameFromOAuth(email, fullName, userID)
+
+	user := &model.UserProfile{
+		ID:        userID,
+		Username:  username,
+		Email:     optionalString(email),
+		FullName:  fullName,
+		AvatarURL: avatarURL,
+		Role:      "user",
+		CreatedAt: time.Now(),
+	}
+
+	return s.userRepo.Upsert(ctx, user)
 }
 
 func userResponse(user *model.UserProfile) *dto.AuthMeResp {
@@ -132,31 +149,32 @@ func userResponse(user *model.UserProfile) *dto.AuthMeResp {
 	}
 }
 
-// UpsertProfile creates or updates a user profile (called during OAuth callback).
-func (s *AuthService) UpsertProfile(ctx context.Context, userID uuid.UUID, email string, fullName, avatarURL *string) *pkg.AppError {
-	email = strings.ToLower(strings.TrimSpace(email))
-	username := usernameFromOAuth(email, fullName, userID)
-	user := &model.UserProfile{
-		ID:        userID,
-		Username:  username,
-		Email:     &email,
-		FullName:  fullName,
-		AvatarURL: avatarURL,
-		Role:      "user",
-		CreatedAt: time.Now(),
-	}
-	return s.userRepo.Upsert(ctx, user)
-}
-
 func usernameFromOAuth(email string, fullName *string, userID uuid.UUID) string {
-	if email != "" {
-		return strings.ToLower(strings.Split(email, "@")[0])
+	suffix := strings.ReplaceAll(userID.String(), "-", "")
+	if len(suffix) > 8 {
+		suffix = suffix[:8]
 	}
-	if fullName != nil {
-		username := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(*fullName), " ", "_"))
-		if username != "" {
-			return username
+
+	if email != "" {
+		base := strings.Split(email, "@")[0]
+		base = strings.ToLower(strings.TrimSpace(base))
+		if base != "" {
+			return base + "_" + suffix
 		}
 	}
+	if fullName != nil {
+		base := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(*fullName), " ", "_"))
+		if base != "" {
+			return base + "_" + suffix
+		}
+	}
+
 	return "user_" + strings.ReplaceAll(userID.String(), "-", "")
+}
+
+func optionalString(value string) *string {
+	if value == "" {
+		return nil
+	}
+	return &value
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 )
 
-// UserProfile mirrors the user_profiles table.
 type UserProfile struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
 	Username  string    `json:"username" gorm:"not null"`

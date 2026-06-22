@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -21,72 +22,89 @@ func NewUserRepo(db *gorm.DB) *UserRepo {
 }
 
 func (r *UserRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.UserProfile, *pkg.AppError) {
-	user := new(model.UserProfile)
-	err := r.db.WithContext(ctx).First(user, "id = ?", id).Error
-	if appErr := handleGormError(err, "user profile"); appErr != nil {
-		return nil, appErr
+	var user model.UserProfile
+	if err := r.db.WithContext(ctx).First(&user, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, pkg.ErrInternal.WithMessage("failed to find user")
 	}
-	return user, nil
-}
 
-func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*model.UserProfile, *pkg.AppError) {
-	user := new(model.UserProfile)
-	err := r.db.WithContext(ctx).First(user, "email = ?", email).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
-	}
-	if appErr := handleGormError(err, "user profile"); appErr != nil {
-		return nil, appErr
-	}
-	return user, nil
+	return &user, nil
 }
 
 func (r *UserRepo) FindByUsername(ctx context.Context, username string) (*model.UserProfile, *pkg.AppError) {
-	user := new(model.UserProfile)
-	err := r.db.WithContext(ctx).First(user, "username = ?", username).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	var user model.UserProfile
+	if err := r.db.WithContext(ctx).
+		First(&user, "LOWER(username) = ?", strings.ToLower(username)).
+		Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, pkg.ErrInternal.WithMessage("failed to find user")
 	}
-	if appErr := handleGormError(err, "user profile"); appErr != nil {
-		return nil, appErr
+
+	return &user, nil
+}
+
+func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*model.UserProfile, *pkg.AppError) {
+	var user model.UserProfile
+	if err := r.db.WithContext(ctx).
+		First(&user, "LOWER(email) = ?", strings.ToLower(email)).
+		Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, pkg.ErrInternal.WithMessage("failed to find user")
 	}
-	return user, nil
+
+	return &user, nil
 }
 
 func (r *UserRepo) FindByUsernameOrEmail(ctx context.Context, identifier string) (*model.UserProfile, *pkg.AppError) {
-	user := new(model.UserProfile)
-	err := r.db.WithContext(ctx).
-		Where("email = ? OR username = ?", identifier, identifier).
-		First(user).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return nil, nil
+	normalized := strings.ToLower(strings.TrimSpace(identifier))
+
+	var user model.UserProfile
+	if err := r.db.WithContext(ctx).
+		First(&user, "LOWER(username) = ? OR LOWER(email) = ?", normalized, normalized).
+		Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, pkg.ErrInternal.WithMessage("failed to find user")
 	}
-	if appErr := handleGormError(err, "user profile"); appErr != nil {
-		return nil, appErr
-	}
-	return user, nil
+
+	return &user, nil
 }
 
 func (r *UserRepo) Create(ctx context.Context, user *model.UserProfile) *pkg.AppError {
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
-		return pkg.ErrInternal.WithMessage("failed to create user profile").WithDetails(err.Error())
+		if isDuplicateError(err) {
+			return pkg.ErrConflict.WithMessage("username already registered")
+		}
+		return pkg.ErrInternal.WithMessage("failed to create user")
 	}
+
 	return nil
 }
 
-func (r *UserRepo) UpdatePassword(ctx context.Context, userID uuid.UUID, password string) *pkg.AppError {
-	err := r.db.WithContext(ctx).
+func (r *UserRepo) UpdatePassword(ctx context.Context, id uuid.UUID, password string) *pkg.AppError {
+	result := r.db.WithContext(ctx).
 		Model(&model.UserProfile{}).
-		Where("id = ?", userID).
-		Update("password", password).Error
-	if appErr := handleGormError(err, "user profile"); appErr != nil {
-		return appErr
+		Where("id = ?", id).
+		Update("password", password)
+	if result.Error != nil {
+		return pkg.ErrInternal.WithMessage("failed to update password")
 	}
+	if result.RowsAffected == 0 {
+		return pkg.ErrNotFound.WithMessage("user not found")
+	}
+
 	return nil
 }
 
 func (r *UserRepo) Upsert(ctx context.Context, user *model.UserProfile) *pkg.AppError {
-	err := r.db.WithContext(ctx).
+	if err := r.db.WithContext(ctx).
 		Clauses(clause.OnConflict{
 			Columns: []clause.Column{{Name: "id"}},
 			DoUpdates: clause.AssignmentColumns([]string{
@@ -97,9 +115,16 @@ func (r *UserRepo) Upsert(ctx context.Context, user *model.UserProfile) *pkg.App
 				"role",
 			}),
 		}).
-		Create(user).Error
-	if err != nil {
-		return pkg.ErrInternal.WithMessage("failed to upsert user profile").WithDetails(err.Error())
+		Create(user).Error; err != nil {
+		if isDuplicateError(err) {
+			return pkg.ErrConflict.WithMessage("username already registered")
+		}
+		return pkg.ErrInternal.WithMessage("failed to upsert user")
 	}
+
 	return nil
+}
+
+func isDuplicateError(err error) bool {
+	return strings.Contains(strings.ToLower(err.Error()), "duplicate")
 }
