@@ -7,8 +7,8 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/model"
+	"github.com/RenzIP/Graphic-Diagram-Online/pkg"
 )
 
 type DocumentRepo struct {

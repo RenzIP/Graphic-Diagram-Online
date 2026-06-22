@@ -5,7 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/pkg"
 )
 
 func handleGormError(err error, entityName string) *pkg.AppError {

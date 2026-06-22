@@ -3,9 +3,9 @@ package router
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/handler"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
+	"github.com/RenzIP/Graphic-Diagram-Online/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/handler"
+	"github.com/RenzIP/Graphic-Diagram-Online/middleware"
 )
 
 type Handlers struct {

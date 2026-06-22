@@ -7,10 +7,10 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/dto"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/repository"
+	"github.com/RenzIP/Graphic-Diagram-Online/dto"
+	"github.com/RenzIP/Graphic-Diagram-Online/model"
+	"github.com/RenzIP/Graphic-Diagram-Online/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/repository"
 )
 
 // DocumentService handles document business logic with authorization.

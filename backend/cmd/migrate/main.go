@@ -9,8 +9,8 @@ import (
 
 	"gorm.io/gorm"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/db"
+	"github.com/RenzIP/Graphic-Diagram-Online/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/db"
 )
 
 func main() {

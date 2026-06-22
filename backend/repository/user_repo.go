@@ -9,8 +9,8 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/model"
+	"github.com/RenzIP/Graphic-Diagram-Online/pkg"
 )
 
 type UserRepo struct {

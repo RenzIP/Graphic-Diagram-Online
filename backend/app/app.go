@@ -9,12 +9,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/db"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/handler"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/repository"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/router"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
+	"github.com/RenzIP/Graphic-Diagram-Online/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/db"
+	"github.com/RenzIP/Graphic-Diagram-Online/handler"
+	"github.com/RenzIP/Graphic-Diagram-Online/repository"
+	"github.com/RenzIP/Graphic-Diagram-Online/router"
+	"github.com/RenzIP/Graphic-Diagram-Online/service"
 )
 
 // Instance holds the initialized Fiber app and DB connection.

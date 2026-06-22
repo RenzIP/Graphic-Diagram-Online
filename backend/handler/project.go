@@ -4,10 +4,10 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/dto"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
+	"github.com/RenzIP/Graphic-Diagram-Online/dto"
+	"github.com/RenzIP/Graphic-Diagram-Online/middleware"
+	"github.com/RenzIP/Graphic-Diagram-Online/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/service"
 )
 
 // ProjectHandler handles project CRUD endpoints.

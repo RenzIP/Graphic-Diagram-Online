@@ -3,7 +3,7 @@ package handler
 import (
 	"github.com/gofiber/fiber/v2"
 
-	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
+	"github.com/RenzIP/Graphic-Diagram-Online/pkg"
 )
 
 // handleError writes an AppError as a JSON response.
