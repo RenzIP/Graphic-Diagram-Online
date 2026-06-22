@@ -71,7 +71,7 @@ export default function HomePage() {
 					</div>
 					<div className="grid grid-cols-1 gap-8 md:grid-cols-3">
 						{[
-							['Lightning Fast', 'Built with SvelteKit and native SVG for 60fps performance on any device. No lag, even with massive diagrams.', 'indigo'],
+							['Lightning Fast', 'Built with Next.js and native SVG for 60fps performance on any device. No lag, even with massive diagrams.', 'indigo'],
 							['Real-time Collaboration', 'Work together with your team in real-time. See cursors, live updates, and conflict-free editing.', 'purple'],
 							['Text-to-Diagram', 'Write diagrams using our intuitive DSL or convert from code. Seamlessly switch between visual and text mode.', 'cyan']
 						].map(([title, text, color]) => (
@@ -105,7 +105,7 @@ export default function HomePage() {
 					</div>
 					<div className="flex items-center justify-between border-t border-slate-900 pt-8 text-sm text-slate-600">
 						<p>&copy; 2026 GraDiOl Inc. All rights reserved.</p>
-						<p>Made with SvelteKit & TailwindCSS</p>
+						<p>Made with Next.js & TailwindCSS</p>
 					</div>
 				</div>
 			</footer>

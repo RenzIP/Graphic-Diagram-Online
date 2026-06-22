@@ -30,7 +30,11 @@ func Setup(app *fiber.App, cfg *config.Config, h Handlers) {
 	api := app.Group("/api")
 
 	// --- Public endpoints (no auth required) ---
+	app.Post("/register", h.Auth.Register)
+	app.Post("/login", h.Auth.Login)
 	api.Get("/health", h.Health.Check)
+	api.Post("/register", h.Auth.Register)
+	api.Post("/login", h.Auth.Login)
 
 	// OAuth routes (public — these initiate and handle the OAuth flow)
 	api.Get("/auth/google", h.Auth.GoogleLogin)
@@ -39,10 +43,15 @@ func Setup(app *fiber.App, cfg *config.Config, h Handlers) {
 	api.Get("/auth/github/callback", h.Auth.GitHubCallback)
 
 	// --- Protected endpoints (auth required) ---
+	rootProtected := app.Group("", middleware.Auth(cfg.JWTSecret))
+	rootProtected.Put("/change-password", h.Auth.ChangePassword)
+
 	protected := api.Group("", middleware.Auth(cfg.JWTSecret))
 
 	// Auth
 	protected.Get("/auth/me", h.Auth.Me)
+	protected.Put("/change-password", h.Auth.ChangePassword)
+	protected.Post("/change-password", h.Auth.ChangePassword)
 
 	// Workspaces
 	protected.Get("/workspaces", h.Workspace.List)

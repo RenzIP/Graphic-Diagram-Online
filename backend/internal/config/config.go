@@ -21,9 +21,8 @@ type Config struct {
 	Port string
 	Env  string // development | staging | production
 
-	// MongoDB
-	MongoURI      string
-	MongoDatabase string
+	// Supabase/PostgreSQL
+	DatabaseURL string
 
 	// JWT (self-signed)
 	JWTSecret string
@@ -59,15 +58,14 @@ func Load() *Config {
 	cfg := &Config{
 		Port:               getEnv("PORT", "8080"),
 		Env:                getEnv("ENV", "development"),
-		MongoURI:           getEnv("MONGODB_URI", "mongodb://localhost:27017"),
-		MongoDatabase:      getEnv("MONGODB_DATABASE", "gradiol"),
+		DatabaseURL:        getEnv("SUPABASE_DATABASE_URL", getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/gradiol?sslmode=disable")),
 		JWTSecret:          getEnv("JWT_SECRET", "dev-secret-change-me"),
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
 		GitHubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
 		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
 		RedisURL:           getEnv("REDIS_URL", "redis://localhost:6379"),
-		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:5173"),
+		FrontendURL:        getEnv("FRONTEND_URL", "http://localhost:3000"),
 		BackendURL:         getEnv("BACKEND_URL", "http://localhost:8080"),
 		RateLimits: RateLimitConfig{
 			Global: getEnvInt("RATE_LIMIT_GLOBAL", 100),
@@ -83,8 +81,8 @@ func Load() *Config {
 		if cfg.JWTSecret == "" || cfg.JWTSecret == "dev-secret-change-me" {
 			log.Fatal("JWT_SECRET is required in production (and must not be the default)")
 		}
-		if cfg.MongoURI == "" {
-			log.Fatal("MONGODB_URI is required in production")
+		if cfg.DatabaseURL == "" {
+			log.Fatal("SUPABASE_DATABASE_URL or DATABASE_URL is required in production")
 		}
 	}
 

@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
+	"github.com/RenzIP/Graphic-Diagram-Online/internal/dto"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/middleware"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/service"
@@ -110,15 +111,76 @@ func (h *AuthHandler) GitHubCallback(c *fiber.Ctx) error {
 // ─── Me ─────────────────────────────────────────────────
 
 // Me handles GET /api/auth/me — returns the current user's profile.
+func (h *AuthHandler) Register(c *fiber.Ctx) error {
+	var req dto.RegisterReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, pkg.ErrBadRequest.WithMessage("invalid request payload"))
+	}
+
+	user, appErr := h.authSvc.Register(c.Context(), req)
+	if appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	token, err := h.signJWT(user.ID, user.Username, user.Role)
+	if err != nil {
+		return handleError(c, pkg.ErrInternal.WithMessage("failed to sign token"))
+	}
+
+	resp := dto.AuthCallbackResp{
+		Token: token,
+		User:  h.authSvc.UserResponse(user),
+	}
+	return pkg.WriteSuccess(c, fiber.StatusCreated, resp)
+}
+
+func (h *AuthHandler) Login(c *fiber.Ctx) error {
+	var req dto.LoginReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, pkg.ErrBadRequest.WithMessage("invalid request payload"))
+	}
+
+	user, appErr := h.authSvc.Login(c.Context(), req)
+	if appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	token, err := h.signJWT(user.ID, user.Username, user.Role)
+	if err != nil {
+		return handleError(c, pkg.ErrInternal.WithMessage("failed to sign token"))
+	}
+
+	resp := dto.AuthCallbackResp{
+		Token: token,
+		User:  h.authSvc.UserResponse(user),
+	}
+	return pkg.WriteSuccess(c, fiber.StatusOK, resp)
+}
+
+func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
+	userID := middleware.GetUserID(c)
+
+	var req dto.ChangePasswordReq
+	if err := c.BodyParser(&req); err != nil {
+		return handleError(c, pkg.ErrBadRequest.WithMessage("invalid request payload"))
+	}
+
+	if appErr := h.authSvc.ChangePassword(c.Context(), userID, req); appErr != nil {
+		return handleError(c, appErr)
+	}
+
+	return pkg.WriteSuccess(c, fiber.StatusOK, fiber.Map{
+		"message": "password changed successfully",
+	})
+}
+
 func (h *AuthHandler) Me(c *fiber.Ctx) error {
 	userID := middleware.GetUserID(c)
-	email, _ := c.Locals("email").(string)
 
 	profile, appErr := h.authSvc.GetProfile(c.Context(), userID)
 	if appErr != nil {
 		return handleError(c, appErr)
 	}
-	profile.Email = email
 
 	return pkg.WriteSuccess(c, fiber.StatusOK, profile)
 }
@@ -134,14 +196,14 @@ func (h *AuthHandler) completeOAuth(c *fiber.Ctx, providerUserID, email, fullNam
 		userID = uuid.NewSHA1(uuid.NameSpaceURL, []byte(providerUserID))
 	}
 
-	// Upsert profile in MongoDB
+	// Upsert profile in database
 	if appErr := h.authSvc.UpsertProfile(c.Context(), userID, email, strPtr(fullName), strPtr(avatarURL)); appErr != nil {
 		log.Printf("[Auth] Upsert failed for user %s: %v", userID, appErr)
 		return c.Redirect(h.cfg.FrontendURL+"/login?error=profile_failed", fiber.StatusTemporaryRedirect)
 	}
 
 	// Sign JWT
-	token, err := h.signJWT(userID, email)
+	token, err := h.signJWT(userID, usernameForToken(email, fullName, userID), "user")
 	if err != nil {
 		log.Printf("[Auth] JWT signing failed: %v", err)
 		return c.Redirect(h.cfg.FrontendURL+"/login?error=token_failed", fiber.StatusTemporaryRedirect)
@@ -152,14 +214,15 @@ func (h *AuthHandler) completeOAuth(c *fiber.Ctx, providerUserID, email, fullNam
 	return c.Redirect(callbackURL, fiber.StatusTemporaryRedirect)
 }
 
-// signJWT creates a signed HS256 JWT with sub + email claims, valid for 7 days.
-func (h *AuthHandler) signJWT(userID uuid.UUID, email string) (string, error) {
+// signJWT creates a signed HS256 JWT with sub, username, and role claims, valid for 7 days.
+func (h *AuthHandler) signJWT(userID uuid.UUID, username, role string) (string, error) {
 	now := time.Now()
 	claims := jwt.MapClaims{
-		"sub":   userID.String(),
-		"email": email,
-		"iat":   now.Unix(),
-		"exp":   now.Add(7 * 24 * time.Hour).Unix(),
+		"sub":      userID.String(),
+		"username": username,
+		"role":     role,
+		"iat":      now.Unix(),
+		"exp":      now.Add(7 * 24 * time.Hour).Unix(),
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString([]byte(h.cfg.JWTSecret))
@@ -175,4 +238,14 @@ func strPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+func usernameForToken(email, fullName string, userID uuid.UUID) string {
+	if email != "" {
+		return email
+	}
+	if fullName != "" {
+		return fullName
+	}
+	return userID.String()
 }

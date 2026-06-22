@@ -1,38 +1,49 @@
 package db
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
-	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
-// Connect establishes a connection to MongoDB and returns the database handle.
-func Connect(uri, dbName string) (*mongo.Database, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	clientOpts := options.Client().ApplyURI(uri)
-
-	client, err := mongo.Connect(clientOpts)
+// Connect establishes a PostgreSQL connection through GORM for Supabase.
+func Connect(databaseURL string) (*gorm.DB, error) {
+	database, err := gorm.Open(postgres.Open(databaseURL), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Warn),
+	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
 
-	// Verify connection
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
-		return nil, fmt.Errorf("failed to ping MongoDB: %w", err)
+	sqlDB, err := database.DB()
+	if err != nil {
+		return nil, fmt.Errorf("failed to access database pool: %w", err)
 	}
 
-	return client.Database(dbName), nil
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetConnMaxLifetime(30 * time.Minute)
+
+	if err := sqlDB.Ping(); err != nil {
+		_ = sqlDB.Close()
+		return nil, fmt.Errorf("failed to ping database: %w", err)
+	}
+
+	return database, nil
 }
 
-// Disconnect gracefully closes the MongoDB connection.
-func Disconnect(database *mongo.Database) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	return database.Client().Disconnect(ctx)
+// Disconnect gracefully closes the PostgreSQL pool behind GORM.
+func Disconnect(database *gorm.DB) {
+	sqlDB, err := database.DB()
+	if err == nil {
+		closeSQLDB(sqlDB)
+	}
+}
+
+func closeSQLDB(sqlDB *sql.DB) {
+	_ = sqlDB.Close()
 }

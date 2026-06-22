@@ -113,8 +113,8 @@ func (s *DocumentService) Create(ctx context.Context, userID uuid.UUID, req dto.
 		WorkspaceID: workspaceID,
 		Title:       title,
 		DiagramType: req.DiagramType,
-		Content:     content,
-		View:        view,
+		Content:     model.JSONB(content),
+		View:        model.JSONB(view),
 		Version:     1,
 		CreatedBy:   &userID,
 		CreatedAt:   time.Now(),
@@ -161,11 +161,11 @@ func (s *DocumentService) Update(ctx context.Context, userID, docID uuid.UUID, r
 		}
 	}
 	if req.Content != nil {
-		doc.Content = *req.Content
+		doc.Content = model.JSONB(*req.Content)
 		bumpVersion = true
 	}
 	if req.View != nil {
-		doc.View = *req.View
+		doc.View = model.JSONB(*req.View)
 		bumpVersion = true
 	}
 
@@ -262,8 +262,8 @@ func toDocumentResp(d *model.Document) *dto.DocumentResp {
 		WorkspaceID: d.WorkspaceID.String(),
 		Title:       d.Title,
 		DiagramType: d.DiagramType,
-		Content:     d.Content,
-		View:        d.View,
+		Content:     json.RawMessage(d.Content),
+		View:        json.RawMessage(d.View),
 		Version:     d.Version,
 		CreatedBy:   createdBy,
 		CreatedAt:   d.CreatedAt,

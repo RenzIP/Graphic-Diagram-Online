@@ -7,7 +7,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
-	"go.mongodb.org/mongo-driver/v2/mongo"
+	"gorm.io/gorm"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/config"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/db"
@@ -20,7 +20,7 @@ import (
 // Instance holds the initialized Fiber app and DB connection.
 type Instance struct {
 	App *fiber.App
-	DB  *mongo.Database
+	DB  *gorm.DB
 	Cfg *config.Config
 }
 
@@ -31,11 +31,11 @@ func New() *Instance {
 	cfg := config.Load()
 
 	// Connect to database
-	database, err := db.Connect(cfg.MongoURI, cfg.MongoDatabase)
+	database, err := db.Connect(cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	log.Println("✓ Connected to MongoDB")
+	log.Println("Connected to Supabase/PostgreSQL")
 
 	// --- Repository layer ---
 	userRepo := repository.NewUserRepo(database)

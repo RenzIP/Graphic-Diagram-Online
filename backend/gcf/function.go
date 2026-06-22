@@ -17,7 +17,7 @@
 //	  --allow-unauthenticated \
 //	  --entry-point=GraDiOlAPI \
 //	  --source=. \
-//	  --set-env-vars="ENV=production,MONGODB_URI=...,MONGODB_DATABASE=...,JWT_SECRET=...,GOOGLE_CLIENT_ID=...,GOOGLE_CLIENT_SECRET=...,GITHUB_CLIENT_ID=...,GITHUB_CLIENT_SECRET=...,FRONTEND_URL=..."
+//	  --set-env-vars="ENV=production,SUPABASE_DATABASE_URL=...,JWT_SECRET=...,GOOGLE_CLIENT_ID=...,GOOGLE_CLIENT_SECRET=...,GITHUB_CLIENT_ID=...,GITHUB_CLIENT_SECRET=...,FRONTEND_URL=..."
 package gcf
 
 import (

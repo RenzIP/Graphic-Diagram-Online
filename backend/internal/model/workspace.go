@@ -6,22 +6,22 @@ import (
 	"github.com/google/uuid"
 )
 
-// Workspace mirrors the workspaces collection.
+// Workspace mirrors the workspaces table.
 type Workspace struct {
-	ID          uuid.UUID `bson:"_id"         json:"id"`
-	Name        string    `bson:"name"        json:"name"`
-	Slug        string    `bson:"slug"        json:"slug"`
-	OwnerID     uuid.UUID `bson:"owner_id"    json:"owner_id"`
-	Description *string   `bson:"description" json:"description"`
-	CreatedAt   time.Time `bson:"created_at"  json:"created_at"`
-	UpdatedAt   time.Time `bson:"updated_at"  json:"updated_at"`
+	ID          uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
+	Name        string    `json:"name" gorm:"not null"`
+	Slug        string    `json:"slug" gorm:"uniqueIndex;not null"`
+	OwnerID     uuid.UUID `json:"owner_id" gorm:"type:uuid;not null"`
+	Description *string   `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
-// WorkspaceMember mirrors the workspace_members collection.
+// WorkspaceMember mirrors the workspace_members table.
 // Composite key: (workspace_id, user_id).
 type WorkspaceMember struct {
-	WorkspaceID uuid.UUID `bson:"workspace_id" json:"workspace_id"`
-	UserID      uuid.UUID `bson:"user_id"      json:"user_id"`
-	Role        string    `bson:"role"          json:"role"` // owner | editor | viewer
-	JoinedAt    time.Time `bson:"joined_at"     json:"joined_at"`
+	WorkspaceID uuid.UUID `json:"workspace_id" gorm:"type:uuid;primaryKey"`
+	UserID      uuid.UUID `json:"user_id" gorm:"type:uuid;primaryKey"`
+	Role        string    `json:"role" gorm:"not null"` // owner | editor | viewer
+	JoinedAt    time.Time `json:"joined_at"`
 }

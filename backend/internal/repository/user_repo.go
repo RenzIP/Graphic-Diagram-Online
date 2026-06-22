@@ -2,53 +2,102 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"github.com/google/uuid"
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/model"
 	"github.com/RenzIP/Graphic-Diagram-Online/internal/pkg"
 )
 
-// UserRepo handles user_profiles collection operations.
 type UserRepo struct {
-	col *mongo.Collection
+	db *gorm.DB
 }
 
-// NewUserRepo creates a new UserRepo.
-func NewUserRepo(db *mongo.Database) *UserRepo {
-	return &UserRepo{col: db.Collection("user_profiles")}
+func NewUserRepo(db *gorm.DB) *UserRepo {
+	return &UserRepo{db: db}
 }
 
-// FindByID returns a user profile by ID.
 func (r *UserRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.UserProfile, *pkg.AppError) {
 	user := new(model.UserProfile)
-	err := r.col.FindOne(ctx, bson.M{"_id": id}).Decode(user)
-	if appErr := handleMongoError(err, "user profile"); appErr != nil {
+	err := r.db.WithContext(ctx).First(user, "id = ?", id).Error
+	if appErr := handleGormError(err, "user profile"); appErr != nil {
 		return nil, appErr
 	}
 	return user, nil
 }
 
-// Upsert inserts or updates a user profile (used during auth callback).
-func (r *UserRepo) Upsert(ctx context.Context, user *model.UserProfile) *pkg.AppError {
-	filter := bson.M{"_id": user.ID}
-	update := bson.M{
-		"$set": bson.M{
-			"email":      user.Email,
-			"full_name":  user.FullName,
-			"avatar_url": user.AvatarURL,
-		},
-		"$setOnInsert": bson.M{
-			"_id":        user.ID,
-			"created_at": user.CreatedAt,
-		},
+func (r *UserRepo) FindByEmail(ctx context.Context, email string) (*model.UserProfile, *pkg.AppError) {
+	user := new(model.UserProfile)
+	err := r.db.WithContext(ctx).First(user, "email = ?", email).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
 	}
-	opts := options.UpdateOne().SetUpsert(true)
+	if appErr := handleGormError(err, "user profile"); appErr != nil {
+		return nil, appErr
+	}
+	return user, nil
+}
 
-	_, err := r.col.UpdateOne(ctx, filter, update, opts)
+func (r *UserRepo) FindByUsername(ctx context.Context, username string) (*model.UserProfile, *pkg.AppError) {
+	user := new(model.UserProfile)
+	err := r.db.WithContext(ctx).First(user, "username = ?", username).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if appErr := handleGormError(err, "user profile"); appErr != nil {
+		return nil, appErr
+	}
+	return user, nil
+}
+
+func (r *UserRepo) FindByUsernameOrEmail(ctx context.Context, identifier string) (*model.UserProfile, *pkg.AppError) {
+	user := new(model.UserProfile)
+	err := r.db.WithContext(ctx).
+		Where("email = ? OR username = ?", identifier, identifier).
+		First(user).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if appErr := handleGormError(err, "user profile"); appErr != nil {
+		return nil, appErr
+	}
+	return user, nil
+}
+
+func (r *UserRepo) Create(ctx context.Context, user *model.UserProfile) *pkg.AppError {
+	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
+		return pkg.ErrInternal.WithMessage("failed to create user profile").WithDetails(err.Error())
+	}
+	return nil
+}
+
+func (r *UserRepo) UpdatePassword(ctx context.Context, userID uuid.UUID, password string) *pkg.AppError {
+	err := r.db.WithContext(ctx).
+		Model(&model.UserProfile{}).
+		Where("id = ?", userID).
+		Update("password", password).Error
+	if appErr := handleGormError(err, "user profile"); appErr != nil {
+		return appErr
+	}
+	return nil
+}
+
+func (r *UserRepo) Upsert(ctx context.Context, user *model.UserProfile) *pkg.AppError {
+	err := r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{
+			Columns: []clause.Column{{Name: "id"}},
+			DoUpdates: clause.AssignmentColumns([]string{
+				"username",
+				"email",
+				"full_name",
+				"avatar_url",
+				"role",
+			}),
+		}).
+		Create(user).Error
 	if err != nil {
 		return pkg.ErrInternal.WithMessage("failed to upsert user profile").WithDetails(err.Error())
 	}
