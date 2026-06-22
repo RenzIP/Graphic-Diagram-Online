@@ -61,6 +61,47 @@ go run ./cmd/api
 
 Server berjalan di `http://localhost:8080`.
 
+## Deploy ke Render
+
+Blueprint deploy tersedia di root repo:
+
+```bash
+render.yaml
+```
+
+Render akan memakai `backend` sebagai root service, build binary API, lalu menjalankan:
+
+```bash
+./bin/gradiol-api
+```
+
+Build hanya akan terpanggil saat ada perubahan di `backend/**` atau `render.yaml`.
+
+Env production yang perlu diisi di dashboard Render:
+
+```env
+ENV=production
+JWT_SECRET=...
+SUPABASE_DATABASE_URL=...
+FRONTEND_URL=https://domain-frontend
+BACKEND_URL=https://domain-backend-render
+REDIS_URL=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+```
+
+Render otomatis mengisi `PORT`, jadi tidak perlu set manual.
+
+Setelah deploy pertama, jalankan schema setup dari Render Shell:
+
+```bash
+./bin/gradiol-migrate setup
+```
+
+Catatan: migrasi sengaja tidak dimasukkan sebagai `preDeployCommand` karena fitur tersebut hanya tersedia untuk paid web service di Render. Untuk plan free, jalankan command migrasi secara manual dari Render Shell.
+
 ## API
 
 | Method | Endpoint | Deskripsi |
