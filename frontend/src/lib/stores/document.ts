@@ -33,6 +33,7 @@ export interface Node {
 		stroke?: string;
 		strokeWidth?: number;
 		strokeDasharray?: string;
+		borderRadius?: number;
 		opacity?: number;
 		fontSize?: number;
 		fontFamily?: string;
