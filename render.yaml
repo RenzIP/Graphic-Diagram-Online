@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: gradiol-backend
+    runtime: go
+    rootDir: backend
+    plan: free
+    buildCommand: go mod download && go build -tags netgo -ldflags "-s -w" -o bin/gradiol-api ./cmd/api && go build -tags netgo -ldflags "-s -w" -o bin/gradiol-migrate ./cmd/migrate
+    startCommand: ./bin/gradiol-api
+    healthCheckPath: /api/health
+    buildFilter:
+      paths:
+        - backend/**
+        - render.yaml
+    envVars:
+      - key: GO_VERSION
+        value: 1.25.0
+      - key: ENV
+        value: production
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_DATABASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: BACKEND_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: LOG_LEVEL
+        value: info
+      - key: LOG_FORMAT
+        value: text
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false

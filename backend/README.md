@@ -1,171 +1,129 @@
-# GraDiOl — Backend
+# GraDiOl Backend
 
-Backend service untuk **GraDiOl** (Graphic Diagram Online), platform editor diagram kolaboratif berbasis web.
+Backend service untuk GraDiOl (Graphic Diagram Online), platform editor diagram kolaboratif berbasis web.
 
 ## Tech Stack
 
-| Teknologi         | Fungsi                                 |
-| ----------------- | -------------------------------------- |
-| **Go 1.25**       | Bahasa utama                           |
-| **Fiber v2**      | HTTP framework + WebSocket             |
-| **Bun ORM**       | Database ORM untuk PostgreSQL          |
-| **PostgreSQL**    | Database utama (Supabase Managed)      |
-| **Redis**         | Presence tracking, node locks, pub/sub |
-| **Supabase Auth** | Autentikasi (JWT)                      |
+| Teknologi | Fungsi |
+| --- | --- |
+| Go 1.25 | Bahasa utama |
+| Fiber v2 | HTTP framework + WebSocket |
+| GORM | ORM PostgreSQL |
+| Supabase/PostgreSQL | Database utama |
+| Redis | Presence tracking, node locks, pub/sub |
+| Supabase Auth | Autentikasi JWT |
 
-## Struktur Proyek
-
-```
-backend/
-├── cmd/api/
-│   └── main.go                    # Entry point
-├── internal/
-│   ├── config/                    # Environment config
-│   ├── middleware/                 # Auth, CORS, rate limiting
-│   ├── db/
-│   │   ├── conn.go                # PostgreSQL connection
-│   │   └── migrations/            # SQL migration files
-│   ├── domain/
-│   │   ├── user/                  # Auth & profile
-│   │   ├── workspace/             # Workspace & members
-│   │   ├── project/               # Project CRUD
-│   │   ├── document/              # Document CRUD (JSONB)
-│   │   ├── version/               # Version history
-│   │   └── template/              # Template CRUD
-│   ├── http/                      # REST API handlers & routes
-│   ├── redis/                     # Presence, locks, pub/sub
-│   └── ws/                        # WebSocket hub & handlers
-├── go.mod
-├── go.sum
-├── Dockerfile
-└── .env.example
-```
-
-## Prerequisites
-
-- [Go 1.25+](https://go.dev/dl/)
-- [PostgreSQL 15+](https://www.postgresql.org/) atau [Supabase](https://supabase.com/)
-- [Redis 7+](https://redis.io/)
-
-## Setup & Development
-
-### 1. Clone & masuk ke folder
-
-```bash
-git clone https://github.com/RenzIP/Graphic-Diagram-Online.git
-cd Graphic-Diagram-Online/backend
-```
-
-### 2. Setup environment variables
+## Setup
 
 ```bash
 cp .env.example .env
-```
-
-Isi file `.env`:
-
-```env
-# Server
-PORT=8080
-
-# Database (Supabase)
-DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
-
-# Redis
-REDIS_URL=redis://localhost:6379
-
-# Supabase Auth
-SUPABASE_URL=https://[PROJECT_REF].supabase.co
-SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# CORS
-CORS_ORIGINS=http://localhost:5173
-```
-
-### 3. Install dependencies
-
-```bash
 go mod download
 ```
 
-### 4. Run migrations
+Isi database environment dengan connection string Supabase/PostgreSQL:
 
-```bash
-# Jalankan migration file secara manual via Supabase Dashboard
-# atau menggunakan tool seperti golang-migrate
+```env
+SUPABASE_DATABASE_URL=postgresql://postgres:[PASSWORD]@[HOST]:5432/postgres
+FRONTEND_URL=http://localhost:3000
 ```
 
-### 5. Jalankan server
+## Database
+
+Schema PostgreSQL tersedia di:
+
+```bash
+supabase/schema.sql
+```
+
+Jalankan migrasi lokal:
+
+```bash
+go run ./cmd/migrate setup
+```
+
+Seed data demo:
+
+```bash
+go run ./cmd/migrate seed
+```
+
+Reset schema:
+
+```bash
+go run ./cmd/migrate reset
+```
+
+## Development
 
 ```bash
 go run ./cmd/api
 ```
 
-Server akan berjalan di `http://localhost:8080`.
+Server berjalan di `http://localhost:8080`.
 
-## API Endpoints
+## Deploy ke Render
 
-### Health
-
-| Method | Endpoint      | Deskripsi    |
-| ------ | ------------- | ------------ |
-| `GET`  | `/api/health` | Health check |
-
-### Auth
-
-| Method | Endpoint             | Deskripsi              |
-| ------ | -------------------- | ---------------------- |
-| `POST` | `/api/auth/callback` | OAuth callback handler |
-
-### Workspaces
-
-| Method   | Endpoint              | Deskripsi            |
-| -------- | --------------------- | -------------------- |
-| `GET`    | `/api/workspaces`     | List user workspaces |
-| `POST`   | `/api/workspaces`     | Create workspace     |
-| `PUT`    | `/api/workspaces/:id` | Update workspace     |
-| `DELETE` | `/api/workspaces/:id` | Delete workspace     |
-
-### Projects
-
-| Method   | Endpoint                       | Deskripsi                  |
-| -------- | ------------------------------ | -------------------------- |
-| `GET`    | `/api/workspaces/:id/projects` | List projects in workspace |
-| `POST`   | `/api/projects`                | Create project             |
-| `PUT`    | `/api/projects/:id`            | Update project             |
-| `DELETE` | `/api/projects/:id`            | Delete project             |
-
-### Documents
-
-| Method   | Endpoint                      | Deskripsi                 |
-| -------- | ----------------------------- | ------------------------- |
-| `GET`    | `/api/projects/:id/documents` | List documents in project |
-| `POST`   | `/api/documents`              | Create document           |
-| `GET`    | `/api/documents/:id`          | Get document detail       |
-| `PUT`    | `/api/documents/:id`          | Update document           |
-| `DELETE` | `/api/documents/:id`          | Delete document           |
-
-### WebSocket
-
-| Endpoint                             | Deskripsi                   |
-| ------------------------------------ | --------------------------- |
-| `ws://localhost:8080/ws/:documentId` | Realtime collaboration room |
-
-## Deployment (GCP Cloud Run)
+Blueprint deploy tersedia di root repo:
 
 ```bash
-# Build & push container image
-gcloud builds submit --tag gcr.io/YOUR_PROJECT_ID/gradiol-backend
-
-# Deploy ke Cloud Run
-gcloud run deploy gradiol-backend \
-    --image gcr.io/YOUR_PROJECT_ID/gradiol-backend \
-    --platform managed \
-    --region asia-southeast2 \
-    --allow-unauthenticated
+render.yaml
 ```
 
-## License
+Render akan memakai `backend` sebagai root service, build binary API, lalu menjalankan:
 
-MIT
+```bash
+./bin/gradiol-api
+```
+
+Build hanya akan terpanggil saat ada perubahan di `backend/**` atau `render.yaml`.
+
+Env production yang perlu diisi di dashboard Render:
+
+```env
+ENV=production
+JWT_SECRET=...
+SUPABASE_DATABASE_URL=...
+FRONTEND_URL=https://domain-frontend
+BACKEND_URL=https://domain-backend-render
+REDIS_URL=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
+GITHUB_CLIENT_ID=...
+GITHUB_CLIENT_SECRET=...
+```
+
+Render otomatis mengisi `PORT`, jadi tidak perlu set manual.
+
+Setelah deploy pertama, jalankan schema setup dari Render Shell:
+
+```bash
+./bin/gradiol-migrate setup
+```
+
+Catatan: migrasi sengaja tidak dimasukkan sebagai `preDeployCommand` karena fitur tersebut hanya tersedia untuk paid web service di Render. Untuk plan free, jalankan command migrasi secara manual dari Render Shell.
+
+## API
+
+| Method | Endpoint | Deskripsi |
+| --- | --- | --- |
+| GET | `/api/health` | Health check |
+| POST | `/api/auth/callback` | OAuth callback handler |
+| GET | `/api/workspaces` | List user workspaces |
+| POST | `/api/workspaces` | Create workspace |
+| PUT | `/api/workspaces/:id` | Update workspace |
+| DELETE | `/api/workspaces/:id` | Delete workspace |
+| GET | `/api/workspaces/:id/projects` | List projects in workspace |
+| POST | `/api/projects` | Create project |
+| PUT | `/api/projects/:id` | Update project |
+| DELETE | `/api/projects/:id` | Delete project |
+| GET | `/api/projects/:id/documents` | List documents in project |
+| POST | `/api/documents` | Create document |
+| GET | `/api/documents/:id` | Get document detail |
+| PUT | `/api/documents/:id` | Update document |
+| DELETE | `/api/documents/:id` | Delete document |
+
+## WebSocket
+
+```text
+ws://localhost:8080/ws/:documentId
+```

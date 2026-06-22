@@ -1,53 +1,15 @@
-import prettier from 'eslint-config-prettier';
-import path from 'node:path';
-import { includeIgnoreFile } from '@eslint/compat';
-import js from '@eslint/js';
-import svelte from 'eslint-plugin-svelte';
-import { defineConfig } from 'eslint/config';
-import globals from 'globals';
-import ts from 'typescript-eslint';
-import svelteConfig from './svelte.config.js';
+import { defineConfig, globalIgnores } from 'eslint/config';
+import nextVitals from 'eslint-config-next/core-web-vitals';
 
-const gitignorePath = path.resolve(import.meta.dirname, '.gitignore');
-
-export default defineConfig(
-	includeIgnoreFile(gitignorePath),
-	js.configs.recommended,
-	...ts.configs.recommended,
-	...svelte.configs.recommended,
-	prettier,
-	...svelte.configs.prettier,
+export default defineConfig([
+	...nextVitals,
 	{
-		languageOptions: { globals: { ...globals.browser, ...globals.node } },
 		rules: {
-			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
-			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
-			'no-undef': 'off',
-			// Downgrade for development phase — tighten gradually
-			'@typescript-eslint/no-explicit-any': 'warn',
-			'@typescript-eslint/no-unused-vars': [
-				'warn',
-				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_', ignoreRestSiblings: true }
-			],
-			'no-case-declarations': 'off',
-			'no-useless-escape': 'warn'
+			'react-hooks/immutability': 'off',
+			'react-hooks/set-state-in-effect': 'off',
+			'@next/next/no-html-link-for-pages': 'off',
+			'react/no-unescaped-entities': 'off'
 		}
 	},
-	{
-		files: ['**/*.svelte', '**/*.svelte.ts', '**/*.svelte.js'],
-		languageOptions: {
-			parserOptions: {
-				projectService: true,
-				extraFileExtensions: ['.svelte'],
-				parser: ts.parser,
-				svelteConfig
-			}
-		},
-		rules: {
-			// Downgrade Svelte-specific rules for development phase
-			'svelte/require-each-key': 'warn',
-			'svelte/no-navigation-without-resolve': 'warn',
-			'svelte/no-unused-svelte-ignore': 'warn'
-		}
-	}
-);
+	globalIgnores(['.next/**', 'node_modules/**', 'out/**'])
+]);
